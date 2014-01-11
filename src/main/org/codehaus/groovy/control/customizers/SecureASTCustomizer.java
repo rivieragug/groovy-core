@@ -1191,7 +1191,7 @@ public class SecureASTCustomizer extends CompilationCustomizer {
 
                 expression.setArguments(transform(expression.getArguments()));
 
-                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", groovyAccessControlArguments);
             }
 
             if(exp instanceof BinaryExpression) {
@@ -1340,11 +1340,11 @@ public class SecureASTCustomizer extends CompilationCustomizer {
             ExpressionStatement expressionStatement = new ExpressionStatement(expression);
             blockStatement.addStatement(expressionStatement);
             ClosureExpression closureExpression = new ClosureExpression(null, blockStatement);
-            ArgumentListExpression newMethodCallArguments = new ArgumentListExpression();
-            newMethodCallArguments.addExpression(objectExpression);
-            newMethodCallArguments.addExpression(methodExpression);
-            newMethodCallArguments.addExpression(closureExpression);
-            return newMethodCallArguments;
+            ArgumentListExpression arguments = new ArgumentListExpression();
+            arguments.addExpression(objectExpression);
+            arguments.addExpression(methodExpression);
+            arguments.addExpression(closureExpression);
+            return arguments;
         }
     }
 
