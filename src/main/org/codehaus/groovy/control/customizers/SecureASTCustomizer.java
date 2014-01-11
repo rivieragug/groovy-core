@@ -594,7 +594,7 @@ public class SecureASTCustomizer extends CompilationCustomizer {
                 Iterator<MethodNode> it = methods.iterator();
                 while(it.hasNext()) {
                     MethodNode methodNode = it.next();
-                    array.addExpression(new ConstantExpression(methodNode.getDeclaringClass().getName() + "." + methodNode.getName()));
+                    array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + "." + methodNode.getName()));
                 }
                 expression.addExpression(array);
             } else {
@@ -1188,7 +1188,7 @@ public class SecureASTCustomizer extends CompilationCustomizer {
                 blockStatement.addStatement(expressionStatement);
                 ClosureExpression closureExpression = new ClosureExpression(null, blockStatement);
                 ArgumentListExpression newMethodCallArguments = new ArgumentListExpression();
-                newMethodCallArguments.addExpression(new ConstantExpression(expression.getObjectExpression().getType().getName()));
+                newMethodCallArguments.addExpression(expression.getObjectExpression());
                 newMethodCallArguments.addExpression(expression.getMethod());
                 newMethodCallArguments.addExpression(closureExpression);
                 expression.setArguments(transform(expression.getArguments()));

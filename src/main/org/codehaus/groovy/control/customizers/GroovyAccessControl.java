@@ -52,14 +52,17 @@ public class GroovyAccessControl {
     public Object checkCall(String clazz, String methodCall, Closure closure) {
         if (methodsOnReceiverBlacklist != null) {
             if(methodsOnReceiverBlacklist.contains(clazz + "." + methodCall)) {
-                throw new SecurityException(clazz + "." + methodCall + " is not allowed");
+                throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
             }
         }
         if (methodsOnReceiverWhitelist != null) {
             if(!methodsOnReceiverWhitelist.contains(clazz + "." + methodCall)) {
-                throw new SecurityException(clazz + "." + methodCall + " is not allowed");
+                throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
             }
         }
         return closure.call();
+    }
+    public Object checkCall(Object object, String methodCall, Closure closure) {
+        return checkCall(object.getClass().getName(), methodCall, closure);
     }
 }
