@@ -560,6 +560,8 @@ public class SecureASTCustomizer extends CompilationCustomizer {
         }
 
         final SecuringCodeCompileTimeVisitor visitor = new SecuringCodeCompileTimeVisitor();
+
+        SecuringCodeRuntimeVisitor runtimeVisitor = new SecuringCodeRuntimeVisitor(source);
         ast.getStatementBlock().visit(visitor);
         for (ClassNode clNode : ast.getClasses()) {
             if (clNode!=classNode) {
@@ -567,6 +569,9 @@ public class SecureASTCustomizer extends CompilationCustomizer {
                 for (MethodNode methodNode : clNode.getMethods()) {
                     if (!methodNode.isSynthetic()) {
                         methodNode.getCode().visit(visitor);
+                        if (isRuntime()) {
+                            methodNode.getCode().visit(runtimeVisitor);
+                        }
                     }
                 }
             }
@@ -580,7 +585,6 @@ public class SecureASTCustomizer extends CompilationCustomizer {
         }
 
         if (isRuntime) {
-            SecuringCodeRuntimeVisitor runtimeVisitor = new SecuringCodeRuntimeVisitor(source);
             BlockStatement block = source.getAST().getStatementBlock();
             runtimeVisitor.visitBlockStatement(block);
 
@@ -610,7 +614,6 @@ public class SecureASTCustomizer extends CompilationCustomizer {
             } else {
                 expression.addExpression(ConstantExpression.NULL);
             }
-
             classNode.addField("groovyAccessControl", MethodNode.ACC_PRIVATE | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, new ClassNode(GroovyAccessControl.class), new ConstructorCallExpression(new ClassNode(GroovyAccessControl.class), expression));
             VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
             scopeVisitor.visitClass(classNode);
@@ -1182,15 +1185,10 @@ public class SecureASTCustomizer extends CompilationCustomizer {
             if(exp instanceof MethodCallExpression) {
                 MethodCallExpression expression = (MethodCallExpression)exp;
 
-                BlockStatement blockStatement = new BlockStatement();
-                ExpressionStatement expressionStatement = new ExpressionStatement(expression);
+                ArgumentListExpression newMethodCallArguments = getArgumentsExpressionsForClosureCall(expression,
+                        expression.getObjectExpression(),
+                        expression.getMethod());
 
-                blockStatement.addStatement(expressionStatement);
-                ClosureExpression closureExpression = new ClosureExpression(null, blockStatement);
-                ArgumentListExpression newMethodCallArguments = new ArgumentListExpression();
-                newMethodCallArguments.addExpression(expression.getObjectExpression());
-                newMethodCallArguments.addExpression(expression.getMethod());
-                newMethodCallArguments.addExpression(closureExpression);
                 expression.setArguments(transform(expression.getArguments()));
 
                 return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
@@ -1204,21 +1202,149 @@ public class SecureASTCustomizer extends CompilationCustomizer {
 
             if(exp instanceof StaticMethodCallExpression) {
                 StaticMethodCallExpression expression = (StaticMethodCallExpression)exp;
-                BlockStatement blockStatement = new BlockStatement();
-                ExpressionStatement expressionStatement = new ExpressionStatement(expression);
 
-                blockStatement.addStatement(expressionStatement);
-                ClosureExpression closureExpression = new ClosureExpression(null, blockStatement);
-                ArgumentListExpression newMethodCallArguments = new ArgumentListExpression();
-                newMethodCallArguments.addExpression(new ConstantExpression(expression.getOwnerType().getName()));
-                newMethodCallArguments.addExpression(new ConstantExpression(expression.getMethod()));
-                newMethodCallArguments.addExpression(closureExpression);
+                ArgumentListExpression newMethodCallArguments = getArgumentsExpressionsForClosureCall(expression,
+                        new ConstantExpression(expression.getOwnerType().getName()),
+                        new ConstantExpression(expression.getMethod()));
+
                 expression.setArguments(transform(expression.getArguments()));
 
                 return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
             }
 
+            if(exp instanceof ClosureExpression) {
+                ClosureExpression expression = (ClosureExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof ConstructorCallExpression) {
+                ConstructorCallExpression expression = (ConstructorCallExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof TernaryExpression) {
+                TernaryExpression expression = (TernaryExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof ElvisOperatorExpression) {
+                ElvisOperatorExpression expression = (ElvisOperatorExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof PrefixExpression) {
+                PrefixExpression expression = (PrefixExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof PostfixExpression) {
+                PostfixExpression expression = (PostfixExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof BooleanExpression) {
+                BooleanExpression expression = (BooleanExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof TupleExpression) {
+                TupleExpression expression = (TupleExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof MapExpression) {
+                MapExpression expression = (MapExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof MapEntryExpression) {
+                MapEntryExpression expression = (MapEntryExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof ListExpression) {
+                ListExpression expression = (ListExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof RangeExpression) {
+                RangeExpression expression = (RangeExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof PropertyExpression) {
+                RangeExpression expression = (RangeExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof AttributeExpression) {
+                AttributeExpression expression = (AttributeExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof FieldExpression) {
+                FieldExpression expression = (FieldExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof MethodPointerExpression) {
+                MethodPointerExpression expression = (MethodPointerExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof ConstantExpression) {
+                ConstantExpression expression = (ConstantExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof ClassExpression) {
+                ClassExpression expression = (ClassExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof VariableExpression) {
+                VariableExpression expression = (VariableExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof DeclarationExpression) {
+                DeclarationExpression expression = (DeclarationExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
             return exp;
+        }
+
+        private ArgumentListExpression getArgumentsExpressionsForClosureCall(Expression expression, Expression objectExpression, Expression methodExpression) {
+            BlockStatement blockStatement = new BlockStatement();
+            ExpressionStatement expressionStatement = new ExpressionStatement(expression);
+            blockStatement.addStatement(expressionStatement);
+            ClosureExpression closureExpression = new ClosureExpression(null, blockStatement);
+            ArgumentListExpression newMethodCallArguments = new ArgumentListExpression();
+            newMethodCallArguments.addExpression(objectExpression);
+            newMethodCallArguments.addExpression(methodExpression);
+            newMethodCallArguments.addExpression(closureExpression);
+            return newMethodCallArguments;
         }
     }
 

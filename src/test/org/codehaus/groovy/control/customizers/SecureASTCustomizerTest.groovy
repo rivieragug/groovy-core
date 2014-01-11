@@ -471,6 +471,31 @@ class SecureASTCustomizerTest extends GroovyTestCase {
         }
     }
 
+    void testMethodNotInWhiteListInsideMethod() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            new ArrayList().add(new ArrayList())
+            public void b() {
+                new ArrayList().clear()
+            }
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.add", "java.lang.Object"]
+        customizer.with {
+            setReceiversWhiteList(methodWhiteList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue("Should have throw a Security Exception for ArrayList.clear", ex.getMessage().contains("java.util.ArrayList.clear"))
+        }
+    }
+
     void testMethodNotInWhiteListButAsArguments() {
         def shell = new GroovyShell(configuration)
         String script = """
