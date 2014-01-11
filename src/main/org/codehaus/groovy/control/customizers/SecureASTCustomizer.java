@@ -21,6 +21,7 @@ import org.codehaus.groovy.ast.expr.*;
 import org.codehaus.groovy.ast.stmt.*;
 import org.codehaus.groovy.classgen.BytecodeExpression;
 import org.codehaus.groovy.classgen.GeneratorContext;
+import org.codehaus.groovy.classgen.VariableScopeVisitor;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
@@ -121,6 +122,7 @@ public class SecureASTCustomizer extends CompilationCustomizer {
     private boolean isPackageAllowed = true;
     private boolean isMethodDefinitionAllowed = true;
     private boolean isClosuresAllowed = true;
+    private boolean isRuntime = false;
 
     // imports
     private List<String> importsWhitelist;
@@ -188,6 +190,14 @@ public class SecureASTCustomizer extends CompilationCustomizer {
 
     public void setClosuresAllowed(final boolean closuresAllowed) {
         isClosuresAllowed = closuresAllowed;
+    }
+
+    public boolean isRuntime() {
+        return isRuntime;
+    }
+
+    public void setRuntime(final boolean runtime) {
+        isRuntime = runtime;
     }
 
     public void setPackageAllowed(final boolean packageAllowed) {
@@ -519,6 +529,7 @@ public class SecureASTCustomizer extends CompilationCustomizer {
     @Override
     public void call(final SourceUnit source, final GeneratorContext context, final ClassNode classNode) throws CompilationFailedException {
         final ModuleNode ast = source.getAST();
+
         if (!isPackageAllowed && ast.getPackage() != null) {
             throw new SecurityException("Package definitions are not allowed");
         }
@@ -548,7 +559,7 @@ public class SecureASTCustomizer extends CompilationCustomizer {
             }
         }
 
-        final SecuringCodeVisitor visitor = new SecuringCodeVisitor();
+        final SecuringCodeCompileTimeVisitor visitor = new SecuringCodeCompileTimeVisitor();
         ast.getStatementBlock().visit(visitor);
         for (ClassNode clNode : ast.getClasses()) {
             if (clNode!=classNode) {
@@ -566,6 +577,43 @@ public class SecureASTCustomizer extends CompilationCustomizer {
             for (MethodNode method : methods) {
                 if (method.getDeclaringClass()==classNode) method.getCode().visit(visitor);
             }
+        }
+
+        if (isRuntime) {
+            SecuringCodeRuntimeVisitor runtimeVisitor = new SecuringCodeRuntimeVisitor(source);
+            BlockStatement block = source.getAST().getStatementBlock();
+            runtimeVisitor.visitBlockStatement(block);
+
+            ArgumentListExpression expression = new ArgumentListExpression();
+            if(receiversWhiteList != null) {
+                ListExpression array = new ListExpression();
+                Iterator<String> iterator = receiversWhiteList.iterator();
+                while(iterator.hasNext()) {
+                    array.addExpression(new ConstantExpression(iterator.next()));
+                }
+                Iterator<MethodNode> it = methods.iterator();
+                while(it.hasNext()) {
+                    MethodNode methodNode = it.next();
+                    array.addExpression(new ConstantExpression(methodNode.getDeclaringClass().getName() + "." + methodNode.getName()));
+                }
+                expression.addExpression(array);
+            } else {
+                expression.addExpression(ConstantExpression.NULL);
+            }
+            if(receiversBlackList != null) {
+                ListExpression array = new ListExpression();
+                Iterator<String> iterator = receiversBlackList.iterator();
+                while(iterator.hasNext()) {
+                    array.addExpression(new ConstantExpression(iterator.next()));
+                }
+                expression.addExpression(array);
+            } else {
+                expression.addExpression(ConstantExpression.NULL);
+            }
+
+            classNode.addField("groovyAccessControl", MethodNode.ACC_PRIVATE | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, new ClassNode(GroovyAccessControl.class), new ConstructorCallExpression(new ClassNode(GroovyAccessControl.class), expression));
+            VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
+            scopeVisitor.visitClass(classNode);
         }
     }
     
@@ -650,7 +698,11 @@ public class SecureASTCustomizer extends CompilationCustomizer {
      * CodeVisitorSupport} class to make sure that future features of the language gets managed by this visitor. Thus,
      * adding a new feature would result in a compilation error if this visitor is not updated.
      */
-    private class SecuringCodeVisitor implements GroovyCodeVisitor {
+    private class SecuringCodeCompileTimeVisitor implements GroovyCodeVisitor {
+
+        public SecuringCodeCompileTimeVisitor() {
+            super();
+        }
 
         /**
          * Checks that a given statement is either in the whitelist or not in the blacklist.
@@ -1098,6 +1150,75 @@ public class SecureASTCustomizer extends CompilationCustomizer {
 
         public void visitBytecodeExpression(final BytecodeExpression expression) {
             assertExpressionAuthorized(expression);
+        }
+    }
+
+    public class SecuringCodeRuntimeVisitor extends ClassCodeExpressionTransformer {
+
+        private SourceUnit sourceUnit;
+
+        public SecuringCodeRuntimeVisitor(SourceUnit source) {
+            sourceUnit = source;
+        }
+
+        @Override
+        public SourceUnit getSourceUnit() {
+            return sourceUnit;
+        }
+
+        @Override
+        public Expression transform(Expression exp) {
+            if(exp instanceof ArgumentListExpression) {
+                ArgumentListExpression expression = (ArgumentListExpression)exp;
+                Iterator<Expression> iterator = expression.iterator();
+                ArgumentListExpression arguments = new ArgumentListExpression();
+                while (iterator.hasNext()) {
+                    Expression exp1 = iterator.next();
+                    arguments.addExpression(transform(exp1));
+                }
+                return arguments;
+            }
+
+            if(exp instanceof MethodCallExpression) {
+                MethodCallExpression expression = (MethodCallExpression)exp;
+
+                BlockStatement blockStatement = new BlockStatement();
+                ExpressionStatement expressionStatement = new ExpressionStatement(expression);
+
+                blockStatement.addStatement(expressionStatement);
+                ClosureExpression closureExpression = new ClosureExpression(null, blockStatement);
+                ArgumentListExpression newMethodCallArguments = new ArgumentListExpression();
+                newMethodCallArguments.addExpression(new ConstantExpression(expression.getObjectExpression().getType().getName()));
+                newMethodCallArguments.addExpression(expression.getMethod());
+                newMethodCallArguments.addExpression(closureExpression);
+                expression.setArguments(transform(expression.getArguments()));
+
+                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+            }
+
+            if(exp instanceof BinaryExpression) {
+                BinaryExpression expression = (BinaryExpression)exp;
+                expression.setRightExpression(transform(expression.getRightExpression()));
+                return expression;
+            }
+
+            if(exp instanceof StaticMethodCallExpression) {
+                StaticMethodCallExpression expression = (StaticMethodCallExpression)exp;
+                BlockStatement blockStatement = new BlockStatement();
+                ExpressionStatement expressionStatement = new ExpressionStatement(expression);
+
+                blockStatement.addStatement(expressionStatement);
+                ClosureExpression closureExpression = new ClosureExpression(null, blockStatement);
+                ArgumentListExpression newMethodCallArguments = new ArgumentListExpression();
+                newMethodCallArguments.addExpression(new ConstantExpression(expression.getOwnerType().getName()));
+                newMethodCallArguments.addExpression(new ConstantExpression(expression.getMethod()));
+                newMethodCallArguments.addExpression(closureExpression);
+                expression.setArguments(transform(expression.getArguments()));
+
+                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+            }
+
+            return exp;
         }
     }
 

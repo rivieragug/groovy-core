@@ -447,4 +447,178 @@ class SecureASTCustomizerTest extends GroovyTestCase {
             '''
         }
     }
+
+    void testMethodNotInWhiteList() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            def a = new ArrayList()
+            a.add(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodWhiteList = ["java.util.ArrayList", "java.lang.Object"]
+        customizer.with {
+            setReceiversWhiteList(methodWhiteList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue(ex.getMessage().contains("java.util.ArrayList.add"))
+        }
+    }
+
+    void testMethodNotInWhiteListButAsArguments() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            def a = new ArrayList()
+            a.add(new ArrayList().clear())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.add", "java.lang.Object"]
+        customizer.with {
+            setReceiversWhiteList(methodWhiteList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue(ex.getMessage().contains("java.util.ArrayList.clear"))
+        }
+    }
+
+
+    void testMethodNotInWhiteListAsABinaryExpression() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            def a = new ArrayList()
+            a.add("" + new ArrayList().clear())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.add", "java.lang.Object"]
+        customizer.with {
+            setReceiversWhiteList(methodWhiteList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue(ex.getMessage().contains("java.util.ArrayList.clear"))
+        }
+    }
+
+    void testMethodNotInWhiteListButAcceptMethodInScript() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            public void b() {
+            }
+            b()
+            def a = new ArrayList()
+            a.add(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodWhiteList = ["java.util.ArrayList", "java.lang.Object"]
+        customizer.with {
+            setReceiversWhiteList(methodWhiteList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue(ex.getMessage().contains("java.util.ArrayList.add"))
+        }
+    }
+
+    void testMethodNotInWhiteListButAcceptClosureInScript() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            def b = {}
+            b()
+            def a = new ArrayList()
+            a.add(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodWhiteList = ["java.util.ArrayList", "java.lang.Object"]
+        customizer.with {
+            setReceiversWhiteList(methodWhiteList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue(ex.getMessage().contains("java.util.ArrayList.add"))
+        }
+    }
+
+    void testMethodNotInWhiteListButAcceptStaticMethodInScript() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            public static void b() {
+            }
+            b()
+            def a = new ArrayList()
+            a.add(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodWhiteList = ["java.util.ArrayList", "java.lang.Object"]
+        customizer.with {
+            setReceiversWhiteList(methodWhiteList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue(ex.getMessage().contains("java.util.ArrayList.add"))
+        }
+    }
+
+    void testStaticMethodInBlackList() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            public static void b() {
+            }
+            b()
+            def a = new ArrayList()
+            a.add(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodBlackList = ["Script2.b"]
+        customizer.with {
+            setReceiversBlackList(methodBlackList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue(ex.getMessage().contains("Script2.b"))
+        }
+    }
+
 }

@@ -63,6 +63,11 @@ public class StaticMethodCallExpression extends Expression implements MethodCall
         return arguments;
     }
 
+    // TODO Why this method was not created ???????
+    public void setArguments(Expression arguments) {
+        this.arguments = arguments;
+    }
+
     public String getMethod() {
         return method;
     }
