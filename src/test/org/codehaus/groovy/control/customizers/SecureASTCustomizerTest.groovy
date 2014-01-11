@@ -467,7 +467,7 @@ class SecureASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
             fail()
         } catch (SecurityException ex) {
-            assertTrue(ex.getMessage().contains("java.util.ArrayList.add"))
+            assertTrue("Should have throw a Security Exception for ArrayList.add", ex.getMessage().contains("java.util.ArrayList.add"))
         }
     }
 
@@ -490,7 +490,7 @@ class SecureASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
             fail()
         } catch (SecurityException ex) {
-            assertTrue(ex.getMessage().contains("java.util.ArrayList.clear"))
+            assertTrue( "Should have throw a Security Exception for ArrayList.clear", ex.getMessage().contains("java.util.ArrayList.clear"))
         }
     }
 
@@ -514,7 +514,7 @@ class SecureASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
             fail()
         } catch (SecurityException ex) {
-            assertTrue(ex.getMessage().contains("java.util.ArrayList.clear"))
+            assertTrue("Should have throw a Security Exception for ArrayList.clear", ex.getMessage().contains("java.util.ArrayList.clear"))
         }
     }
 
@@ -540,7 +540,7 @@ class SecureASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
             fail()
         } catch (SecurityException ex) {
-            assertTrue(ex.getMessage().contains("java.util.ArrayList.add"))
+            assertTrue("Should have throw a Security Exception for ArrayList.add", ex.getMessage().contains("java.util.ArrayList.add"))
         }
     }
 
@@ -561,12 +561,12 @@ class SecureASTCustomizerTest extends GroovyTestCase {
         customizer.with {
             setReceiversWhiteList(methodWhiteList);
         }
-        //try {
+        try {
             shell.evaluate(script)
-//            fail()
-//        } catch (SecurityException ex) {
-//            assertTrue(ex.getMessage().contains("java.util.ArrayList.add"))
-//        }
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue("Should have throw a Security Exception for ArrayList.add", ex.getMessage().contains("java.util.ArrayList.add"))
+        }
     }
 
     void testMethodNotInWhiteListButAcceptStaticMethodInScript() {
@@ -591,7 +591,7 @@ class SecureASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
             fail()
         } catch (SecurityException ex) {
-            assertTrue(ex.getMessage().contains("java.util.ArrayList.add"))
+            assertTrue("Should have throw a Security Exception for ArrayList.add", ex.getMessage().contains("java.util.ArrayList.add"))
         }
     }
 
@@ -617,7 +617,107 @@ class SecureASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
             fail()
         } catch (SecurityException ex) {
-            assertTrue(ex.getMessage().contains("Script2.b"))
+            assertTrue("Should have throw a Security Exception for Script2.b", ex.getMessage().contains("Script2.b"))
+        }
+    }
+
+    void testForNameSecurity() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            def a = Math.class.forName('java.util.ArrayList').newInstance()
+            a.add(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodList = ["java.util.ArrayList", "java.lang.Object", "java.lang.Math", "java.lang.Class.newInstance"]
+        customizer.with {
+            setReceiversWhiteList(methodList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue("Should have throw a Security Exception for java.util.ArrayList.add", ex.getMessage().contains("java.util.ArrayList.add"))
+        }
+
+    }
+
+    void testForNameSecurityFromInt() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            def a = 5.class.forName('java.util.ArrayList').newInstance()
+            a.add(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodList = ["int", "java.util.ArrayList", "java.lang.Object", "java.lang.Math", "java.lang.Class.newInstance"]
+        customizer.with {
+            setReceiversWhiteList(methodList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue("Should have throw a Security Exception for java.util.ArrayList.add", ex.getMessage().contains("java.util.ArrayList.add"))
+        }
+
+    }
+
+    void testForNameSecurityNewify() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            @Newify
+            def create() {
+                java.util.ArrayList.new();
+            }
+            a = create()
+            a.add(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodList = ["int", "java.util.ArrayList", "java.lang.Object", "java.lang.Math", "java.lang.Class", "java.lang.Class.newInstance"]
+        customizer.with {
+            setReceiversWhiteList(methodList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue("Should have throw a Security Exception for java.util.ArrayList.add", ex.getMessage().contains("java.util.ArrayList.add"))
+        }
+    }
+
+    void testForNameSecurityWithMethodNameInString() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            @Newify
+            def create() {
+                java.util.ArrayList.new();
+            }
+            a = create()
+            a.'add'(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        customizer.isRuntime = true
+        def methodList = ["int", "java.util.ArrayList", "java.lang.Object", "java.lang.Math", "java.lang.Class", "java.lang.Class.newInstance"]
+        customizer.with {
+            setReceiversWhiteList(methodList);
+        }
+        try {
+            shell.evaluate(script)
+            fail()
+        } catch (SecurityException ex) {
+            assertTrue("Should have throw a Security Exception for java.util.ArrayList.add", ex.getMessage().contains("java.util.ArrayList.add"))
         }
     }
 
