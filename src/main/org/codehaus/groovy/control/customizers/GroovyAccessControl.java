@@ -47,6 +47,7 @@ public class GroovyAccessControl {
         } else {
             this.methodsOnReceiverBlacklist = null;
         }
+
     }
 
     public Object checkCall(String clazz, String methodCall, Closure closure) {
