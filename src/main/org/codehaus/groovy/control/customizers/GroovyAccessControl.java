@@ -24,6 +24,7 @@ import java.util.List;
 
 /**
  * TODO Add JavaDocs
+ * TODO Revisit location in the correct package
  *
  * @author Corinne Krych
  * @author Fabrice Matrat

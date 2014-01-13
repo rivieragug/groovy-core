@@ -24,7 +24,7 @@ import org.codehaus.groovy.control.MultipleCompilationErrorsException
  */
 class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
     CompilerConfiguration configuration
-    SecureASTCustomizer customizer
+    SecureRuntimeASTCustomizer customizer
 
     void setUp() {
         configuration = new CompilerConfiguration()
@@ -379,7 +379,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         configuration.addCompilationCustomizers(customizer)
         customizer.methodDefinitionAllowed = true
-        def methodList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Class"]
+        def methodList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Class.forName"]
         customizer.with {
             setReceiversBlackList(methodList);
         }
