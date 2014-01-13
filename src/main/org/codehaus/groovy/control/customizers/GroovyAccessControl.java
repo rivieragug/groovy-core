@@ -32,38 +32,20 @@ import java.util.List;
 
 
 public class GroovyAccessControl {
-    // methods for a given receiver, syntax like MyReceiver.myMethod
-    private final List<String> methodsOnReceiverWhitelist;
-    private final List<String> methodsOnReceiverBlacklist;
-
-    public GroovyAccessControl(ArrayList whitelist, ArrayList blacklist) {
-        if(whitelist != null) {
-            this.methodsOnReceiverWhitelist = Collections.unmodifiableList(whitelist);
-        } else {
-            this.methodsOnReceiverWhitelist = null;
-        }
-        if(blacklist != null) {
-            this.methodsOnReceiverBlacklist = Collections.unmodifiableList(blacklist);
-        } else {
-            this.methodsOnReceiverBlacklist = null;
-        }
-
+    private final List<MethodChecker> methodCheckers;
+    public GroovyAccessControl(List<MethodChecker> methodCheckers) {
+        this.methodCheckers = Collections.unmodifiableList(methodCheckers);
+    }
+    public Object checkMethodCall(Object object, String methodCall, Closure closure) {
+        return checkMethodCall(object.getClass().getName(), methodCall, closure);
     }
 
-    public Object checkCall(String clazz, String methodCall, Closure closure) {
-        if (methodsOnReceiverBlacklist != null) {
-            if(methodsOnReceiverBlacklist.contains(clazz + "." + methodCall)) {
-                throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
-            }
-        }
-        if (methodsOnReceiverWhitelist != null) {
-            if(!methodsOnReceiverWhitelist.contains(clazz + "." + methodCall)) {
+    public Object checkMethodCall(String clazz, String methodCall, Closure closure) {
+        for(MethodChecker methodChecker:methodCheckers) {
+            if (!methodChecker.isAllowed(clazz, methodCall)) {
                 throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
             }
         }
         return closure.call();
-    }
-    public Object checkCall(Object object, String methodCall, Closure closure) {
-        return checkCall(object.getClass().getName(), methodCall, closure);
     }
 }
