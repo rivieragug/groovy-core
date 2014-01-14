@@ -34,9 +34,34 @@ import java.util.*;
  *
  */
 public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
+    // TODO move methods to compile time check
+    private List<String> methodsWhiteList;
+    private List<String> methodsBlackList;
 
     public SecureRuntimeASTCustomizer() {
         super();
+    }
+
+    public void setMethodsBlackList(final List<String> methodsBlackList) {
+        if (methodsWhiteList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both whitelist and blacklist");
+        }
+        this.methodsBlackList = methodsBlackList;
+    }
+
+    public List<String> getMethodsBlackList() {
+        return methodsBlackList;
+    }
+
+    public void setMethodsWhiteList(final List<String> methodsWhiteList) {
+        if (methodsBlackList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both whitelist and blacklist");
+        }
+        this.methodsWhiteList = methodsWhiteList;
+    }
+
+    public List<String> getMethodsWhiteList() {
+        return methodsWhiteList;
     }
 
     @Override
@@ -50,9 +75,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
 //      if (something) {  // Want to add only once the GroovyAccessControl but is it the right place
         ArgumentListExpression expression = new ArgumentListExpression();
-        if(getReceiversWhiteList() != null) {
+        if(getMethodsWhiteList() != null) {
             ListExpression array = new ListExpression();
-            for(String whiteListElement : getReceiversWhiteList()) {
+            for(String whiteListElement : getMethodsWhiteList()) {
                 array.addExpression(new ConstantExpression(whiteListElement));
             }
             List<MethodNode> methods = filterMethods(classNode);
@@ -65,9 +90,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         } else {
             expression.addExpression(ConstantExpression.NULL);
         }
-        if(getReceiversBlackList() != null) {
+        if(getMethodsBlackList() != null) {
             ListExpression array = new ListExpression();
-            for(String blackListElement : getReceiversBlackList()) {
+            for(String blackListElement : getMethodsBlackList()) {
                 array.addExpression(new ConstantExpression(blackListElement));
             }
             expression.addExpression(array);
@@ -121,6 +146,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
             if(exp instanceof BinaryExpression) {
                 BinaryExpression expression = (BinaryExpression)exp;
+                expression.setLeftExpression(transform(expression.getLeftExpression()));
                 expression.setRightExpression(transform(expression.getRightExpression()));
                 return expression;
             }

@@ -51,7 +51,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         result
     }
 
-    void testMethodNotInWhiteList() {
+    void testMethodInScript() {
+        // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
@@ -61,10 +62,22 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object"]
+        // 2. not defined in WL
+        def methodWhiteList = ["java.util.ArrayList.ctor", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversWhiteList(methodWhiteList);
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.add")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.util.ArrayList.add"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
         }
 
         assert hasSecurityException ({
@@ -72,7 +85,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.add")
     }
 
-    void testMethodNotInWhiteListInsideMethod() {
+    void testMethodInsideMethod() {
+        // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
@@ -86,17 +100,29 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
+        // 2. not defined in WL
         def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.add", "java.util.ArrayList.ctor", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversWhiteList(methodWhiteList);
+            setMethodsWhiteList(methodWhiteList);
+        }
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.clear")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.util.ArrayList.clear"]
+        customizer.with {
+            setMethodsWhiteList(null)
+            setMethodsBlackList(methodBlackList)
         }
         assert hasSecurityException ({
             shell.evaluate(script)
         }, "java.util.ArrayList.clear")
     }
 
-    void testMethodNotInWhiteListButAsArguments() {
+    void testMethodAsArguments() {
+        // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
@@ -106,10 +132,23 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
+        // 2. not defined in WL
         def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.util.ArrayList.add", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversWhiteList(methodWhiteList);
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.clear")
+
+        // TODO 3. defined in BL
+        def methodBlackList = ["java.util.ArrayList.clear"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(null)
+            setMethodsBlackList(methodBlackList)
         }
 
         assert hasSecurityException ({
@@ -117,8 +156,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.clear")
     }
 
-
-    void testMethodNotInWhiteListAsABinaryExpression() {
+    void testMethodAsARightBinaryExpression() {
+        // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
@@ -128,10 +167,22 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
+        // 2. not defined in WL
         def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.util.ArrayList.add", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversWhiteList(methodWhiteList);
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.clear")
+
+        // 2. defined in BL
+        def methodBlackList = ["java.util.ArrayList.clear"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
         }
 
         assert hasSecurityException ({
@@ -139,31 +190,67 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.clear")
     }
 
-    void testMethodNotInWhiteListButAcceptMethodInScript() {
+    void testMethodAsLeftBinaryExpression() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.util.ArrayList
+            def a = new ArrayList()
+            a.add(new ArrayList().clear() + "")
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.util.ArrayList.add", "java.lang.Object"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.clear")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.util.ArrayList.clear"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.clear")
+    }
+
+    void testMethodDefinedInScript() {
+        // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
             public void b() {
             }
             b()
-            def a = new ArrayList()
-            a.add(new ArrayList())
         """
         shell.evaluate(script)
         // no error means success
 
+        // 2. not defined in WL, but still no exception should be thrown
         def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversWhiteList(methodWhiteList);
+            setMethodsWhiteList(methodWhiteList);
         }
 
-        assert hasSecurityException ({
+        assert !hasSecurityException ({
             shell.evaluate(script)
-        }, "java.util.ArrayList.add")
+        }, "Script2.b")
     }
 
+    //TODO
     void testMethodNotInWhiteListButAcceptClosureInScript() {
+        // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
@@ -178,7 +265,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def methodWhiteList = ["java.util.ArrayList", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversWhiteList(methodWhiteList);
+            setMethodsWhiteList(methodWhiteList);
         }
         assert hasSecurityException ({
             shell.evaluate(script)
@@ -201,7 +288,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object", "Script2"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversWhiteList(methodWhiteList);
+            setMethodsWhiteList(methodWhiteList);
         }
 
         assert hasSecurityException ({
@@ -209,6 +296,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.add")
     }
 
+    // TODO is it useful to have Script2.b in BL ??
     void testStaticMethodInBlackList() {
         def shell = new GroovyShell(configuration)
         String script = """
@@ -225,7 +313,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def methodBlackList = ["Script2.b"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversBlackList(methodBlackList);
+            setMethodsBlackList(methodBlackList);
         }
 
         assert hasSecurityException ({
@@ -246,7 +334,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def methodList = ["java.util.ArrayList.add"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -267,7 +355,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def methodList = ["java.util.ArrayList.add"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -291,31 +379,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def methodList = ["java.util.ArrayList.add"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setReceiversBlackList(methodList);
-        }
-
-        assert hasSecurityException ({
-            shell.evaluate(script)
-        }, "java.util.ArrayList.add")
-    }
-
-    void testForNameSecurityWithMethodNameInString() {
-        def shell = new GroovyShell(configuration)
-        String script = """
-            @Newify
-            def create() {
-                java.util.ArrayList.new();
-            }
-            a = create()
-            a.'add'(new ArrayList())
-        """
-        shell.evaluate(script)
-        // no error means success
-
-        def methodList = ["java.util.ArrayList.add"]
-        configuration.addCompilationCustomizers(customizer)
-        customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -341,7 +405,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         customizer.methodDefinitionAllowed = true
         def methodList = ["java.util.ArrayList.clear"]
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -361,7 +425,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         customizer.methodDefinitionAllowed = true
         def methodList = ["java.util.ArrayList", "java.lang.Class"]
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -381,7 +445,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         customizer.methodDefinitionAllowed = true
         def methodList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Class.forName"]
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -401,7 +465,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         customizer.methodDefinitionAllowed = true
         def methodList = ["java.util.ArrayList.ctor"]
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -409,6 +473,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList")
     }
 
+    //TODO Failing test
     void testConstructorWithNewify() {
         def shell = new GroovyShell(configuration)
         String script = """
@@ -425,7 +490,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         customizer.methodDefinitionAllowed = true
         def methodList = ["java.util.ArrayList"]
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -451,7 +516,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         customizer.methodDefinitionAllowed = true
         def methodList = ["java.util.ArrayList.add"]
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
@@ -477,7 +542,31 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         customizer.methodDefinitionAllowed = true
         def methodList = ["java.util.ArrayList.add"]
         customizer.with {
-            setReceiversBlackList(methodList);
+            setMethodsBlackList(methodList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.add")
+    }
+
+    void testForNameSecurityWithMethodNameInString() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            @Newify
+            def create() {
+                java.util.ArrayList.new();
+            }
+            a = create()
+            a.'add'(new ArrayList())
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        def methodList = ["java.util.ArrayList.add"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsBlackList(methodList);
         }
 
         assert hasSecurityException ({
