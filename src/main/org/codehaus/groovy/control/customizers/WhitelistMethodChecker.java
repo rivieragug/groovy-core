@@ -19,32 +19,28 @@ package org.codehaus.groovy.control.customizers;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
-public class WhitelistRuntimeChecker implements MethodChecker {
+public class WhitelistMethodChecker implements MethodChecker {
     // methods for a given receiver, syntax like MyReceiver.myMethod
     private final List<String> methodsOnReceiverWhitelist;
-    private final List<String> methodsOnReceiverBlacklist;
 
-    public WhitelistRuntimeChecker(ArrayList whitelist, ArrayList blacklist) {
+    public WhitelistMethodChecker(ArrayList whitelist) {
         if(whitelist != null) {
             this.methodsOnReceiverWhitelist = Collections.unmodifiableList(whitelist);
         } else {
             this.methodsOnReceiverWhitelist = null;
         }
-        if(blacklist != null) {
-            this.methodsOnReceiverBlacklist = Collections.unmodifiableList(blacklist);
-        } else {
-            this.methodsOnReceiverBlacklist = null;
-        }
-
     }
 
-    public boolean isAllowed(String clazz, String methodCall) {
-        if (methodsOnReceiverBlacklist != null) {
-            if(methodsOnReceiverBlacklist.contains(clazz + "." + methodCall)) {
-                return false;
-            }
-        }
+    public List<String> getConfigurationList() {
+        return methodsOnReceiverWhitelist;
+    }
+
+
+    public boolean isAllowed(Map args) {
+        String clazz = (String)args.get("class");
+        String methodCall = (String)args.get("method");
         if (methodsOnReceiverWhitelist != null) {
             if(!methodsOnReceiverWhitelist.contains(clazz + "." + methodCall)) {
                 return false;

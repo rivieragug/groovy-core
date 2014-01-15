@@ -18,9 +18,7 @@ package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * TODO Add JavaDocs
@@ -32,8 +30,8 @@ import java.util.List;
 
 
 public class GroovyAccessControl {
-    private final List<MethodChecker> methodCheckers;
-    public GroovyAccessControl(List<MethodChecker> methodCheckers) {
+    private final List<Checker> methodCheckers;
+    public GroovyAccessControl(List<Checker> methodCheckers) {
         this.methodCheckers = Collections.unmodifiableList(methodCheckers);
     }
     public Object checkMethodCall(Object object, String methodCall, Closure closure) {
@@ -41,11 +39,14 @@ public class GroovyAccessControl {
     }
 
     public Object checkMethodCall(String clazz, String methodCall, Closure closure) {
-        for(MethodChecker methodChecker:methodCheckers) {
-            if (!methodChecker.isAllowed(clazz, methodCall)) {
+        for(Checker methodChecker: methodCheckers) {
+            Map map = new HashMap();
+            map.put("class", clazz); map.put("method", methodCall);
+            if (!methodChecker.isAllowed(map)) {
                 throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
             }
         }
         return closure.call();
     }
+    //TODO public Object checkReceiver()
 }

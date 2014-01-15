@@ -16,9 +16,10 @@
 
 package org.codehaus.groovy.control.customizers;
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import java.util.List;
+import java.util.Map;
 
-interface MethodCheckerFactory {
-    ConstructorCallExpression getInstance(SecureRuntimeASTCustomizer customizer, ClassNode classNode);
+interface Checker {
+    List<String> getConfigurationList();
+    boolean isAllowed(Map arguments);
 }

@@ -65,7 +65,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setReceiversWhiteList(methodWhiteList);
-            addMethodChecker(new WhitelistRuntimeChecker(methodWhiteList, null))
+            addMethodChecker(new WhitelistMethodChecker(methodWhiteList))
         }
 
         assert hasSecurityException ({
@@ -73,6 +73,40 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.add")
     }
 
+    public static class MethodPatternChecker implements MethodChecker {
+        private List methodPatternBlackList;
+        MethodPatternChecker(List methodPatternBlackList) {
+            this.methodPatternBlackList = methodPatternBlackList
+        }
+        List<String> getConfigurationList() {
+            return methodPatternBlackList
+        }
+        boolean isAllowed(Map map) {
+            String methodName = map["method"]
+            return !methodName.startsWith(methodPatternBlackList[0])
+        }
+    }
+
+    void testMethodWithCustomCheckers() {
+        def shell = new GroovyShell(configuration)
+        String script = """
+            def _myForbiddenMethod() {}
+            _myForbiddenMethod()
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        def methodPatternBlackList = ["_"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            addMethodChecker(new MethodPatternChecker(methodPatternBlackList))
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "Script2._myForbiddenMethod")
+    }
+//
 //    void testMethodNotInWhiteListInsideMethod() {
 //        def shell = new GroovyShell(configuration)
 //        String script = """

@@ -34,15 +34,38 @@ import java.util.*;
  *
  */
 public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
-    private List<MethodChecker> methodCheckers;
+    private List<MethodChecker> methodsCheckers;
+    // TODO private List<ReceiverChecker> receiversCheckers;
 
     public SecureRuntimeASTCustomizer() {
         super();
-        methodCheckers =  new ArrayList<MethodChecker>();
+        methodsCheckers =  new ArrayList<MethodChecker>();
     }
 
     public void addMethodChecker(MethodChecker methodChecker) {
-        methodCheckers.add(methodChecker);
+        methodsCheckers.add(methodChecker);
+    }
+
+    public ConstructorCallExpression injectCheckerASTConstructor(Checker checker, ClassNode classNode) {
+        ArgumentListExpression expression = new ArgumentListExpression();
+        if(checker.getConfigurationList() != null) {
+            ListExpression array = new ListExpression();
+            for(String listElement : checker.getConfigurationList()) {
+                array.addExpression(new ConstantExpression(listElement));
+            }
+            // TODO WL add stuff in it
+//            List<MethodNode> methods = filterMethods(classNode);
+//            for(MethodNode methodNode : methods) {
+//                array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + "." + methodNode.getName()));
+//            }
+            // Need to add all the method of other class
+            // even inner class ? or just className.*
+            expression.addExpression(array);
+        } else {
+            expression.addExpression(ConstantExpression.NULL);
+        }
+
+        return new ConstructorCallExpression(new ClassNode(checker.getClass()), expression);
     }
 
     @Override
@@ -54,17 +77,14 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             methodNode.getCode().visit(runtimeVisitor);
         }
 
-//      if (something) {  // Want to add only once the GroovyAccessControl but is it the right place
-
-//      }
-
         ArgumentListExpression argumentListExpression = new ArgumentListExpression();
 
         ListExpression array = new ListExpression();
-        for(MethodChecker methodChecker : methodCheckers) {
+        // Loop for each category of checkers
+        for(MethodChecker methodChecker : methodsCheckers) {
             try {
-                MethodCheckerFactory factory = (MethodCheckerFactory)Class.forName(methodChecker.getClass().getName() + "Factory").newInstance();
-                array.addExpression(factory.getInstance(this, classNode));
+                // constructor for Method checker WL
+                array.addExpression(injectCheckerASTConstructor(methodChecker, classNode));
             } catch (Exception exception) {
                 //TODO
             }

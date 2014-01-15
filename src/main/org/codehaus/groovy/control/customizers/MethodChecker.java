@@ -16,6 +16,6 @@
 
 package org.codehaus.groovy.control.customizers;
 
-interface MethodChecker {
-    boolean isAllowed(String clazz, String methodCall);
+interface MethodChecker extends Checker {
+
 }
