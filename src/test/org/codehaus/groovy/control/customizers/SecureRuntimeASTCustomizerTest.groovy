@@ -56,7 +56,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            def a = new ArrayList()
+            def a = (Object)new ArrayList()
             a.add(new ArrayList())
         """
         shell.evaluate(script)
@@ -90,9 +90,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            //new ArrayList().add(new ArrayList())
             public void b() {
-                def a = new ArrayList()
+                def a = (Object)new ArrayList()
                 a.clear()
             }
             b();
@@ -126,7 +125,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            def a = new ArrayList()
+            def a = ((Object)new ArrayList())
             a.add(new ArrayList().clear())
         """
         shell.evaluate(script)
@@ -143,9 +142,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
         }, "java.util.ArrayList.clear")
 
-        // TODO 3. defined in BL
+        // 3. defined in BL
         def methodBlackList = ["java.util.ArrayList.clear"]
-        configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(null)
             setMethodsBlackList(methodBlackList)
@@ -161,8 +159,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            def a = new ArrayList()
-            a.add("" + new ArrayList().clear())
+            def a = ((Object)new ArrayList())
+            a.add("" + ((Object)new ArrayList()).clear())
         """
         shell.evaluate(script)
         // no error means success
@@ -195,8 +193,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            def a = new ArrayList()
-            a.add(new ArrayList().clear() + "")
+            def a = ((Object)new ArrayList())
+            a.add(((Object)new ArrayList()).clear() + "")
         """
         shell.evaluate(script)
         // no error means success
@@ -249,7 +247,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
     }
 
     //TODO
-    void testMethodNotInWhiteListButAcceptClosureInScript() {
+    void testClosureDefinedInScript() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
@@ -262,6 +260,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
+        // 2. not defined in WL, but still no exception should be thrown
         def methodWhiteList = ["java.util.ArrayList", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
@@ -272,7 +271,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.add")
     }
 
-    void testMethodNotInWhiteListButAcceptStaticMethodInScript() {
+    void testStaticMethodDefinedInScript() {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
@@ -285,6 +284,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
+        // 2. not defined in WL, but still no exception should be thrown
         def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object", "Script2"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
@@ -296,7 +296,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.add")
     }
 
-    // TODO is it useful to have Script2.b in BL ??
     void testStaticMethodInBlackList() {
         def shell = new GroovyShell(configuration)
         String script = """
@@ -310,6 +309,9 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
+        // Test we're going into StaticMethodCallExpression as Math.random goes through MethodCallExpression
+        // This BL doesn't make any sense
+        // TODO any better way?
         def methodBlackList = ["Script2.b"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
@@ -376,9 +378,20 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
-        def methodList = ["java.util.ArrayList.add"]
+        // 2. not defined in WL, but still no exception should be thrown
+        def methodWhiteList = ["java.util.ArrayList","java.util.ArrayList.ctor", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.add")
+
+        // 3. defined in BL
+        def methodList = ["java.util.ArrayList.add"]
+        customizer.with {
+            setMethodsWhiteList(null)
             setMethodsBlackList(methodList);
         }
 
@@ -387,12 +400,12 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.add")
     }
 
-    void testForMethodClassCodeInsideScript() {
+    void testMethodCallInClassMethod() {
         def shell = new GroovyShell(configuration)
         String script = """
             class A {
                 public void b() {
-                    def c = new ArrayList()
+                    def c = ((Object)new ArrayList())
                     c.clear()
                 }
             }
@@ -412,11 +425,11 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
         }, "java.util.ArrayList.clear")
     }
-
+    //TODO
     void testConstructorWithClassForName() {
         def shell = new GroovyShell(configuration)
         String script = """
-            Class.forName('java.util.ArrayList').newInstance()
+            ((Object)Class).forName('java.util.ArrayList').newInstance()
         """
         shell.evaluate(script)
         // no error means success
@@ -432,7 +445,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
         }, "java.lang.Class")
     }
-
+    //TODO
     void testConstructorWithClassForNameComingFromAnotherClass() {
         def shell = new GroovyShell(configuration)
         String script = """
@@ -479,7 +492,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         String script = """
             @Newify
             def create() {
-                java.util.ArrayList.new();
+                ((Object)java.util.ArrayList.new());
             }
             a = create()
         """
@@ -550,14 +563,14 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.add")
     }
 
-    void testForNameSecurityWithMethodNameInString() {
+    void testMethodCallAsString() {
         def shell = new GroovyShell(configuration)
         String script = """
             @Newify
             def create() {
                 java.util.ArrayList.new();
             }
-            a = create()
+            def a = ((Object)create())
             a.'add'(new ArrayList())
         """
         shell.evaluate(script)
@@ -580,7 +593,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            def a = [new ArrayList().clear()]
+            def a = [((Object)new ArrayList()).clear()]
         """
         shell.evaluate(script)
         // no error means success
@@ -615,7 +628,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            def alias = new ArrayList().&clear
+            def alias = ((Object)new ArrayList()).&clear
             alias()
         """
         shell.evaluate(script)
@@ -778,6 +791,40 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
     }
 
     // TODO new java.awt.Point(1,2).@x
+    void testPropertyDirectGet() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+           import java.awt.Point
+           Point point  = new Point(1, 2)
+           point.@x
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.awt.Point","java.awt.Point.ctor","java.lang.Object"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+
+        // 3. defined in BL
+        def methodBlackList = ["TODO"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+    }
+
 
     // TODO point.x=3 (property set)
     void testPropertySet() {
@@ -814,7 +861,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.awt.Point.set")
     }
 
-    // TODO point.@x=4 (attribute set)
+    // TODO point.@x=4 (Direct attribute set)
     void testAttributeSet() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -838,7 +885,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.awt.Point.set")
 
         // 3. defined in BL
-        def methodBlackList = ["java.awt.Point.set"]
+        def methodBlackList = ["TODO"]
         customizer.with {
             setMethodsWhiteList(null);
             setMethodsBlackList(methodBlackList);
@@ -846,7 +893,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.set")
+        }, "TODO")
     }
 
     // TODO points*.x=3 (spread operator)
@@ -855,8 +902,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
            import java.awt.Point
-           Point point  =  new Point(1, 2)
-           point.*x = 3
+           def points  =  [new Point(1, 2)]
+           points*.x = 3
         """
         shell.evaluate(script)
         // no error means success
@@ -884,53 +931,437 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.awt.Point.set")
     }
 
-    //x=new int[3];x[0]=1;x[0] array set get
+    // TODO Array get
+    void testArrayGet() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            def x = new int[3]
+            x[0]
+        """
+        shell.evaluate(script)
+        // no error means success
 
-    // inner class
-//    "class foo {\n" +
-//    "  class bar {\n" +
-//    "    static void juu() { 5.class.forName('java.lang.String') }\n" +
-//    "  }\n" +
-//    "static void main(String[] args) { bar.juu() }\n" +
-//    "}"
-    // static initialization block
-//    "class foo {\n" +
-//    "static { 5.class.forName('java.lang.String') }\n" +
-//    " static void main(String[] args) { }\n" +
-//    "}"
-    // initialization block
-//    "class foo {\n" +
-//    "{ 5.class.forName('java.lang.String') }\n" +
-//    "}\n" +
-//    "new foo()\n" +
-//    "return null"
-    //field intitialization
-//    "class foo {\n" +
-//    "def obj = 5.class.forName('java.lang.String')\n" +
-//    "}\n" +
-//    "new foo()\n" +
-//    "return null"
-    //static field initialization
-//    "class foo {\n" +
-//    "static obj = 5.class.forName('java.lang.String')\n" +
-//    "}\n" +
-//    "new foo()\n" +
-//    "return null"
-    //compound assignment
-//    point.x += 3
-//    intArray[1] <<= 3;
-    //comparison (BL compareTo)
-//    point==point
-//    5==5
-    // nested class
-//    x = new Object() {
-//        def plusOne(rhs) {
-//            return rhs+1;
-//        }
-//    }
-//    x.plusOne(5)
-    //ArrayArgumentsInvocation() {
-//    new TheTest.MethodWithArrayArg().f(new Object[3])")
-    // null
-//    x=null; null.getClass()
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object", "TODO"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+
+        // 3. defined in BL
+        def methodBlackList = ["TODO"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+    }
+
+    // TODO Array set
+    void testArraySet() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            def x = new int[3]
+            x[0]=1
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object", "TODO"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+
+        // 3. defined in BL
+        def methodBlackList = ["TODO"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+    }
+
+    // TODO Inner Class
+    void testInnerClass() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            class foo {
+              class bar {
+                static void juu() { 5.class.forName('java.lang.String') }
+              }
+              static void main(String[] args) { bar.juu() }
+            }
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "java.lang.Class.juu"] //Should be able to remove juu
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.lang.Class.forName"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+    }
+
+    // TODO Format the test otherwise working
+    void testStaticInitializationBlock() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            class foo {
+              static { 5.class.forName('java.lang.String') }
+              static void main(String[] args) { }
+           }
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object", "java.lang.Class"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.lang.Class.forName"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+    }
+
+    // TODO Initialization Block
+    void testInitializationBlock() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            class foo {
+                { 5.class.forName('java.lang.String') }
+            }
+            new foo()
+            return null
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.ctor"] // Should be able to remove foo.ctor
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.lang.Class.forName"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+    }
+
+    // TODO Field Initialization
+    void testFieldInitialization() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            class foo {
+                def obj = 5.class.forName('java.lang.String')
+            }
+            new foo()
+            return null
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.ctor"] // Should be able to remove foo.ctor
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.lang.Class.forName"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+    }
+
+    // TODO Static Field Initialization
+    void testStaticFieldInitialization() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            class foo {
+                static  obj = 5.class.forName('java.lang.String')
+            }
+            new foo()
+            return null
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.ctor"] // Should be able to remove foo.ctor
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.lang.Class.forName"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.lang.Class.forName")
+    }
+
+    // TODO Nested class
+    void testNestedClass() {
+
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            x = new Object() {
+                def plusOne(rhs) {
+                    return rhs+1;
+                }
+            }
+            x.plusOne(5)
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+
+        // 3. defined in BL
+        def methodBlackList = ["TODO"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.awt.Point.set")
+    }
+
+    // TODO intArray[1] <<= 3 (compound assignment)
+    void testCompoundAssignmentOnArray() {
+
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            def intArray = [0, 1]
+            intArray[1] <<= 3
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+
+        // 3. defined in BL
+        def methodBlackList = ["TODO"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+    }
+
+    // TODO
+    void testComparisonPrimitives() {
+
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            5==5
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+
+        // 3. defined in BL
+        def methodBlackList = ["TODO"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+    }
+
+    // TODO
+    void testComparisonObject() {
+
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            import java.awt.Point
+            def p = new Point(1, 2)
+            p == p
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+
+        // 3. defined in BL
+        def methodBlackList = ["TODO"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+    }
+
+    // TODO Probably 3 tests for null manipulation
+    void testNullBehavior() {
+
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            null
+            null.getClass()
+            x = null
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+
+        // 3. defined in BL
+        def methodBlackList = ["TODO"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "TODO")
+    }
 }
+
