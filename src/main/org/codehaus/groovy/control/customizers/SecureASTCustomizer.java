@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2013 the original author or authors.
+ * Copyright 2003-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,6 +165,36 @@ public class SecureASTCustomizer extends CompilationCustomizer {
     // receivers
     private List<String> receiversWhiteList;
     private List<String> receiversBlackList;
+
+    // Method Black/White List
+    // How to merge with Receivers as they are defined as real class
+    // This means we can have conflicts between both
+    private List<String> methodsWhiteList;
+    private List<String> methodsBlackList;
+
+    public void setMethodsBlackList(final List<String> methodsBlackList) {
+        if (methodsWhiteList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both whitelist and blacklist");
+        }
+        this.methodsBlackList = methodsBlackList;
+    }
+
+    public List<String> getMethodsBlackList() {
+        return methodsBlackList;
+    }
+
+    public void setMethodsWhiteList(final List<String> methodsWhiteList) {
+        if (methodsBlackList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both whitelist and blacklist");
+        }
+        this.methodsWhiteList = methodsWhiteList;
+    }
+
+    public List<String> getMethodsWhiteList() {
+        return methodsWhiteList;
+    }
+
+
 
     public SecureASTCustomizer() {
         super(CompilePhase.CANONICALIZATION);
@@ -596,6 +626,15 @@ public class SecureASTCustomizer extends CompilationCustomizer {
         }
     }
 
+    private void assertMethodIsAllowed(final String clazz, final String method) {
+        if (methodsWhiteList != null && !methodsWhiteList.contains(clazz + '.' + method)) {
+            throw new SecurityException("Call " + clazz + '.' + method + " is not allowed");
+        }
+        if (methodsBlackList != null && methodsBlackList.contains(clazz + '.' + method)) {
+            throw new SecurityException("Call " + clazz + '.' + method + " is not allowed");
+        }
+    }
+
     private void assertImportIsAllowed(final String className) {
         if (importsWhitelist != null && !importsWhitelist.contains(className)) {
             if (starImportsWhitelist != null) {
@@ -699,16 +738,19 @@ public class SecureASTCustomizer extends CompilationCustomizer {
                         final String typename = expr.getObjectExpression().getType().getName();
                         assertImportIsAllowed(typename);
                         assertStaticImportIsAllowed(expr.getMethodAsString(), typename);
+                        assertMethodIsAllowed(expr.getObjectExpression().getType().getName(), expr.getMethodAsString());
                     } else if (expression instanceof StaticMethodCallExpression) {
                         StaticMethodCallExpression expr = (StaticMethodCallExpression) expression;
                         final String typename = expr.getOwnerType().getName();
                         assertImportIsAllowed(typename);
                         assertStaticImportIsAllowed(expr.getMethod(), typename);
+                        assertMethodIsAllowed(typename, expr.getMethodAsString());
                     } else if (expression instanceof MethodPointerExpression) {
                         MethodPointerExpression expr = (MethodPointerExpression) expression;
                         final String typename = expr.getType().getName();
                         assertImportIsAllowed(typename);
                         assertStaticImportIsAllowed(expr.getText(), typename);
+                        assertMethodIsAllowed(typename, expr.getMethodName().getText());
                     }
                 } catch (SecurityException e) {
                     throw new SecurityException("Indirect import checks prevents usage of expression", e);
@@ -859,6 +901,7 @@ public class SecureASTCustomizer extends CompilationCustomizer {
             receiver.visit(this);
             final Expression method = call.getMethod();
             checkConstantTypeIfNotMethodNameOrProperty(method);
+            assertMethodIsAllowed(call.getObjectExpression().getType().getName(), call.getMethodAsString());
             call.getArguments().visit(this);
         }
 
@@ -871,6 +914,7 @@ public class SecureASTCustomizer extends CompilationCustomizer {
                 throw new SecurityException("Method calls not allowed on [" + typeName + "]");
             }
             call.getArguments().visit(this);
+            assertMethodIsAllowed(call.getOwnerType().getName(), call.getMethodAsString());
         }
 
         public void visitConstructorCallExpression(final ConstructorCallExpression call) {

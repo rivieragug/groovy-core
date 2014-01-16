@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2011 the original author or authors.
+ * Copyright 2003-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -388,6 +388,16 @@ class SecureASTCustomizerTest extends GroovyTestCase {
         shell.evaluate('1.plus(1)')
         shell.evaluate('2.0.multiply(4)')
         assert hasSecurityException {shell.evaluate('"string".toUpperCase()')}
+    }
+
+    void testReceiverBlackListMethod() {
+        def shell = new GroovyShell(configuration)
+        customizer.methodsBlackList = ['java.lang.Math.random']
+        customizer.indirectImportCheckEnabled = true
+        shell.evaluate("""
+            java.lang.Math.random()
+        """)
+        assert hasSecurityException {shell.evaluate('java.lang.Math.random()')}
     }
 
     void testReceiverWhiteListWithStaticMethod() {
