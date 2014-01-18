@@ -63,7 +63,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
     }
 
     public void setBinaryOperatorWhiteList(Map<String, List<List<String>>> binaryOperatorWhiteList) {
-        if (binaryOperatorBlackList != null) {
+        if (binaryOperatorBlackList != null && binaryOperatorWhiteList != null) {
             throw new IllegalArgumentException("You are not allowed to set both whiteBinarylist and blackBinarylist");
         }
         this.binaryOperatorWhiteList = binaryOperatorWhiteList;
@@ -74,7 +74,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
     }
 
     public void setBinaryOperatorBlackList(Map<String, List<List<String>>> binaryOperatorBlackList) {
-        if (binaryOperatorWhiteList != null) {
+        if (binaryOperatorWhiteList != null && binaryOperatorBlackList != null) {
             throw new IllegalArgumentException("You are not allowed to set both whiteBinarylist and blackBinarylist");
         }
         this.binaryOperatorBlackList = binaryOperatorBlackList;
@@ -460,8 +460,8 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         private ArgumentListExpression getArgumentsExpressionForCheckBinaryCall(BinaryExpression binaryExpression){
             BlockStatement blockStatement = new BlockStatement();
 
-            Parameter left = new Parameter(ClassHelper.GROOVY_OBJECT_TYPE, "left");
-            Parameter right = new Parameter(ClassHelper.GROOVY_OBJECT_TYPE, "right");
+            Parameter left = new Parameter(ClassHelper.OBJECT_TYPE, "left");
+            Parameter right = new Parameter(ClassHelper.OBJECT_TYPE, "right");
 
             BinaryExpression be = new BinaryExpression(new VariableExpression(left),binaryExpression.getOperation(), new VariableExpression(right));
 

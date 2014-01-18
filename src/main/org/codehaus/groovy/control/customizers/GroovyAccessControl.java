@@ -150,7 +150,7 @@ public class GroovyAccessControl {
         }
 
 
-        return closure.call();
+        return closure.call(left, right);
     }
 
 
