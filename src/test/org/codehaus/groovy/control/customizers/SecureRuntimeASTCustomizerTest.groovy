@@ -46,9 +46,16 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
                 }
                 return false
             }
+        } catch (ExceptionInInitializerError e) {
+            if (e.exception instanceof SecurityException) {
+                if(errorMessage) assertTrue("Should have throw a Security Exception with " + errorMessage + " instead of " + e.exception.getMessage(), e.exception.getMessage().contains(errorMessage))
+                return true
+            } else {
+                errorMessage ? fail("Should have throw a Security Exception with " + errorMessage + " instead of " + e.exception.getMessage()) : fail(e.exception.getMessage().contains(errorMessage))
+            }
         }
 
-        result
+    result
     }
 
     void testMethodInScript() {
