@@ -20,7 +20,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 
 /**
- * Tests for the {@link SecureASTCustomizer} class.
+ * Tests for the {@link SecureRuntimeASTCustomizer} class.
  */
 class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
     CompilerConfiguration configuration
@@ -63,7 +63,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList.ctor", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList.new", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -100,7 +100,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.add", "java.util.ArrayList.ctor", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.add", "java.util.ArrayList.new", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -132,7 +132,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.util.ArrayList.add", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.util.ArrayList.add", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -166,7 +166,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.util.ArrayList.add", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.util.ArrayList.add", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -200,7 +200,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.util.ArrayList.add", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.util.ArrayList.add", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -235,7 +235,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL, but still no exception should be thrown
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -285,7 +285,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL, but still no exception should be thrown
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object", "Script2"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.lang.Object", "Script2"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -379,7 +379,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL, but still no exception should be thrown
-        def methodWhiteList = ["java.util.ArrayList","java.util.ArrayList.ctor", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList","java.util.ArrayList.new", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -456,7 +456,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         configuration.addCompilationCustomizers(customizer)
         customizer.methodDefinitionAllowed = true
-        def methodList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Class.forName"]
+        def methodList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.lang.Class.forName"]
         customizer.with {
             setMethodsBlackList(methodList);
         }
@@ -476,7 +476,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         configuration.addCompilationCustomizers(customizer)
         customizer.methodDefinitionAllowed = true
-        def methodList = ["java.util.ArrayList.ctor"]
+        def methodList = ["java.util.ArrayList.new"]
         customizer.with {
             setMethodsBlackList(methodList);
         }
@@ -599,7 +599,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -635,7 +635,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object", "org.codehaus.groovy.runtime.MethodClosure.call"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.lang.Object", "org.codehaus.groovy.runtime.MethodClosure.call"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -803,7 +803,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point.ctor","java.lang.Object"]
+        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -839,7 +839,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point.ctor","java.lang.Object", ]
+        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object", ]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -874,7 +874,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point.ctor","java.lang.Object", ]
+        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object", ]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -909,7 +909,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point.ctor","java.lang.Object", ]
+        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object", ]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -1088,7 +1088,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.ctor"] // Should be able to remove foo.ctor
+        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.new"] // Should be able to remove foo.new
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -1125,7 +1125,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.ctor"] // Should be able to remove foo.ctor
+        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.new"] // Should be able to remove foo.new
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -1162,7 +1162,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.ctor"] // Should be able to remove foo.ctor
+        def methodWhiteList = ["java.lang.Object", "java.lang.Class", "foo.new"] // Should be able to remove foo.new
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
