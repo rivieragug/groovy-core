@@ -69,6 +69,11 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         super.call(source, context, classNode);
 
         SecuringCodeRuntimeVisitor runtimeVisitor = new SecuringCodeRuntimeVisitor(source);
+
+        List<Statement> initializers = classNode.getObjectInitializerStatements();
+        for(Statement statement : initializers) {
+            statement.visit(runtimeVisitor);
+        }
         for (MethodNode methodNode : classNode.getMethods()) {
             methodNode.getCode().visit(runtimeVisitor);
         }
@@ -129,6 +134,8 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                     Expression exp1 = iterator.next();
                     arguments.addExpression(transform(exp1));
                 }
+
+                arguments.setSourcePosition(exp);
                 return arguments;
             }
 
@@ -141,7 +148,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
                 expression.setArguments(transform(expression.getArguments()));
 
-                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", groovyAccessControlArguments);
+                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", groovyAccessControlArguments);
+                methodCallExpression.setSourcePosition(exp);
+                return methodCallExpression;
             }
 
             if(exp instanceof BinaryExpression) {
@@ -160,7 +169,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
                 expression.setArguments(transform(expression.getArguments()));
 
-                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+                methodCallExpression.setSourcePosition(exp);
+                return methodCallExpression;
             }
 
             if(exp instanceof ClosureExpression) {
@@ -175,7 +186,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                         new ConstantExpression(expression.getType().getName()),
                         new ConstantExpression("ctor"));
 
-                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+                methodCallExpression.setSourcePosition(exp);
+                return methodCallExpression;
             }
 
             if(exp instanceof TernaryExpression) {
@@ -228,8 +241,13 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
             if(exp instanceof ListExpression) {
                 ListExpression expression = (ListExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return expression;
+                List<Expression> list = expression.getExpressions();
+                ListExpression transformed = new ListExpression();
+                for(Expression ex1 : list) {
+                    transformed.addExpression(transform(ex1));
+                }
+                transformed.setSourcePosition(expression);
+                return transformed;
             }
 
             if(exp instanceof RangeExpression) {
