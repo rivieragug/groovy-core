@@ -1010,7 +1010,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "TODO")
     }
 
-    // TODO Inner Class
     void testInnerClass() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -1048,7 +1047,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.Class.forName")
     }
 
-    // TODO Format the test otherwise working
     void testStaticInitializationBlock() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -1121,7 +1119,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.Class.forName")
     }
 
-    // TODO Field Initialization
     void testFieldInitialization() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -1158,7 +1155,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.Class.forName")
     }
 
-    // TODO Static Field Initialization
     void testStaticFieldInitialization() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -1339,15 +1335,11 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "TODO")
     }
 
-    // TODO Probably 3 tests for null manipulation
     void testNullBehavior() {
-
         // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
-            null
-            null.getClass()
-            x = null
+            def toto = null.getClass()
         """
         shell.evaluate(script)
         // no error means success
@@ -1361,10 +1353,10 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "TODO")
+        }, "org.codehaus.groovy.runtime.NullObject.getClass")
 
         // 3. defined in BL
-        def methodBlackList = ["TODO"]
+        def methodBlackList = ["org.codehaus.groovy.runtime.NullObject.getClass"]
         customizer.with {
             setMethodsWhiteList(null);
             setMethodsBlackList(methodBlackList);
@@ -1372,7 +1364,27 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "TODO")
+        }, "org.codehaus.groovy.runtime.NullObject.getClass")
+    }
+
+    void testNullBehaviorAssignment() {
+
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            x = null
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object"]
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        shell.evaluate(script)
     }
 }
 

@@ -79,6 +79,7 @@ public class GroovyAccessControl {
     }
 
     public Object checkCall(String clazz, String methodCall, Closure closure) {
+        System.out.println ("I am here" + clazz + "." + methodCall);
         if (methodsOnReceiverBlacklist != null) {
             if(methodsOnReceiverBlacklist.contains(clazz + "." + methodCall)) {
                 throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
@@ -93,7 +94,12 @@ public class GroovyAccessControl {
     }
 
     public Object checkCall(Object object, String methodCall, Closure closure) {
-        return checkCall(object.getClass().getName(), methodCall, closure);
+        if(object != null) {
+            return checkCall(object.getClass().getName(), methodCall, closure);
+        } else {
+            return checkCall(org.codehaus.groovy.runtime.NullObject.class.getName(), methodCall, closure);
+        }
+        //return true;
     }
 
     public Object checkMethodPointerDeclaration(String clazz, String methodCall, Closure closure) {

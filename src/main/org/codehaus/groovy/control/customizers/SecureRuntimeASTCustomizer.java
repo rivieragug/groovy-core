@@ -23,6 +23,7 @@ import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.classgen.VariableScopeVisitor;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.syntax.Types;
 
 import java.util.*;
 
@@ -281,7 +282,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 BinaryExpression expression = (BinaryExpression)exp;
                 expression.setRightExpression(transform(expression.getRightExpression()));
 
-                if(!(exp instanceof DeclarationExpression)){
+                if(expression.getOperation().getType() != Types.EQUALS){
                     expression.setLeftExpression(transform(expression.getLeftExpression()));
                     ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(expression);
                     return new MethodCallExpression(
