@@ -642,7 +642,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         configuration.addCompilationCustomizers(customizer)
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object"]
+        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.new", "java.lang.Object"]
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
             setMethodPointersWhiteList(methodWhiteList);
@@ -667,7 +667,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
     }
 
-    //TODO 'foo'.toString().hashCode()
     void testMethodChain() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
