@@ -282,14 +282,13 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 BinaryExpression expression = (BinaryExpression)exp;
                 expression.setRightExpression(transform(expression.getRightExpression()));
 
-                if(expression.getOperation().getType() != Types.EQUALS){
+                if(!(expression instanceof DeclarationExpression)){
                     expression.setLeftExpression(transform(expression.getLeftExpression()));
                     ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(expression);
                     return new MethodCallExpression(
                             new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)),
                             "checkBinaryExpression", argumentListExpression);
                 }
-
                 return expression;
             }
 

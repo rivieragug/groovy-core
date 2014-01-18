@@ -133,9 +133,10 @@ public class GroovyAccessControl {
         }
 
         if(binaryOperatorWhiteList != null) {
+            boolean found =  false;
             if(binaryOperatorWhiteList.containsKey(token)){
                 List<List<String>> list = binaryOperatorWhiteList.get(token);
-                boolean found =  false;
+
                 for(List<String> tuple : list){
                     //TODO add uni test for list size==2
                     if(tuple.get(0).equals(clazzLeft) && tuple.get(1).equals(clazzRight)){
@@ -143,9 +144,9 @@ public class GroovyAccessControl {
                         break;
                     }
                 }
-                if (! found) {
-                    throw new SecurityException(clazzLeft + " " + token + " "  + clazzRight+ " is not allowed ..........." );
-                }
+            }
+            if (! found) {
+                throw new SecurityException(clazzLeft + " " + token + " "  + clazzRight+ " is not allowed ..........." );
             }
         }
 

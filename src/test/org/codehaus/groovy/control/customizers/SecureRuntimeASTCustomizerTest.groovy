@@ -996,16 +996,14 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
         }, "[I [ java.lang.Integer is not allowed ...........")
 
-        // 2. defined in WL
+        // 3. defined in WL
         binaryOperatorWhiteList = ["[": [["[I", "java.lang.Integer"]]]
         customizer.with {
             setBinaryOperatorWhiteList(binaryOperatorWhiteList);
         }
         shell.evaluate(script)
 
-
-        // 3. not defined in BL
-
+        // 4. not defined in BL
         def operatorBlackList = ["[": [["[I", "java.lang.Long"]]]
         customizer.with {
             setBinaryOperatorWhiteList(null);
@@ -1013,7 +1011,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }
         shell.evaluate(script)
 
-        // 4. defined in BL
+        // 5. defined in BL
         operatorBlackList = ["[": [["[I", "java.lang.Integer"]]]
         customizer.with {
             setBinaryOperatorWhiteList(null);
@@ -1036,27 +1034,56 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
-        // 2. not defined in WL
-        def methodWhiteList = ["java.lang.Object", "TODO"]
         configuration.addCompilationCustomizers(customizer)
+
+        // 2. not defined in WL
+        def binaryOperatorWhiteList = ["[": [["[I", "java.lang.Integer"]]]
         customizer.with {
-            setMethodsWhiteList(methodWhiteList);
+            setBinaryOperatorWhiteList(binaryOperatorWhiteList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "TODO")
+        }, "java.lang.Integer = java.lang.Integer is not allowed ...........")
 
-        // 3. defined in BL
-        def methodBlackList = ["TODO"]
+        // 3. defined in WL
+        binaryOperatorWhiteList = [
+                "[": [["[I", "java.lang.Integer"]],
+                "=": [["java.lang.Integer", "java.lang.Integer"]]
+        ]
         customizer.with {
-            setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            setBinaryOperatorWhiteList(binaryOperatorWhiteList);
         }
+        shell.evaluate(script)
 
-        assert hasSecurityException ({
-            shell.evaluate(script)
-        }, "TODO")
+        // TODO test black list
+
+
+//        // 2. defined in WL
+//        binaryOperatorWhiteList = ["[": [["[I", "java.lang.Integer"]]]
+//        customizer.with {
+//            setBinaryOperatorWhiteList(binaryOperatorWhiteList);
+//        }
+//        shell.evaluate(script)
+//
+//        // 3. not defined in BL
+//        def operatorBlackList = ["[": [["[I", "java.lang.Long"]]]
+//        customizer.with {
+//            setBinaryOperatorWhiteList(null);
+//            setBinaryOperatorBlackList(operatorBlackList);
+//        }
+//        shell.evaluate(script)
+//
+//        // 4. defined in BL
+//        operatorBlackList = ["[": [["[I", "java.lang.Integer"]]]
+//        customizer.with {
+//            setBinaryOperatorWhiteList(null);
+//            setBinaryOperatorBlackList(operatorBlackList);
+//        }
+//
+//        assert hasSecurityException ({
+//            shell.evaluate(script)
+//        }, "[I [ java.lang.Integer is not allowed")
     }
 
     void testInnerClass() {
