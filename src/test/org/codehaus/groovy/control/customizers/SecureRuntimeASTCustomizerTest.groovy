@@ -847,20 +847,20 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         """
         shell.evaluate(script)
         // no error means success
+        configuration.addCompilationCustomizers(customizer)
 
         // 2. not defined in WL
         def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object", ]
-        configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.set")
+        }, "java.awt.Point.setX")
 
         // 3. defined in BL
-        def methodBlackList = ["java.awt.Point.set"]
+        def methodBlackList = ["java.awt.Point.x"]
         customizer.with {
             setMethodsWhiteList(null);
             setMethodsBlackList(methodBlackList);
@@ -919,7 +919,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object", ]
+        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object" ]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -939,6 +939,39 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         assert hasSecurityException ({
             shell.evaluate(script)
         }, "java.awt.Point.set")
+    }
+
+    void testSpreadWithMethodCallOperator() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+           def list = ['first', 'second']
+           list*.toString()
+        """
+        shell.evaluate(script)
+        // no error means success
+        configuration.addCompilationCustomizers(customizer)
+
+        // 2. not defined in WL
+        def methodWhiteList = ["java.lang.String","java.util.ArrayList", "java.lang.Object" ]
+        customizer.with {
+            setMethodsWhiteList(methodWhiteList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.toString")
+
+        // 3. defined in BL
+        def methodBlackList = ["java.util.ArrayList.toString"]
+        customizer.with {
+            setMethodsWhiteList(null);
+            setMethodsBlackList(methodBlackList);
+        }
+
+        assert hasSecurityException ({
+            shell.evaluate(script)
+        }, "java.util.ArrayList.toString")
     }
 
     // TODO Array get
