@@ -110,7 +110,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             expression.addExpression(ConstantExpression.NULL);
         }
 //      }
-        classNode.addField("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, new ClassNode(GroovyAccessControl.class), new ConstructorCallExpression(new ClassNode(GroovyAccessControl.class), expression));
+        classNode.addFieldFirst("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, new ClassNode(GroovyAccessControl.class), new ConstructorCallExpression(new ClassNode(GroovyAccessControl.class), expression));
 
         VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
         scopeVisitor.visitClass(classNode);
