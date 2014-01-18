@@ -74,6 +74,11 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         for(Statement statement : initializers) {
             statement.visit(runtimeVisitor);
         }
+        List<FieldNode> fields = classNode.getFields();
+        for (FieldNode field : fields) {
+            runtimeVisitor.visitField(field);
+        }
+
         for (MethodNode methodNode : classNode.getMethods()) {
             methodNode.getCode().visit(runtimeVisitor);
         }
