@@ -595,7 +595,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.add")
     }
 
-    // TODO method call in array init
     void testMethodInArrayInititalization() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -975,7 +974,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.toString")
     }
 
-    // TODO Array get
     void testArrayGet() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -1116,7 +1114,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.Class.forName")
     }
 
-    // TODO Initialization Block
     void testInitializationBlock() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
