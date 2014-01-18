@@ -18,6 +18,7 @@ package org.codehaus.groovy.control.customizers
 
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.codehaus.groovy.syntax.Types
 
 /**
  * Tests for the {@link SecureRuntimeASTCustomizer} class.
@@ -1267,39 +1268,16 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.awt.Point.set")
     }
 
-    // TODO intArray[1] <<= 3 (compound assignment)
     void testCompoundAssignmentOnArray() {
-
-        // 1. no restriction
         def shell = new GroovyShell(configuration)
-        String script = """
-            def intArray = [0, 1]
-            intArray[1] <<= 3
-        """
-        shell.evaluate(script)
-        // no error means success
-
-        // 2. not defined in WL
-        def methodWhiteList = ["java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
-        customizer.with {
-            setMethodsWhiteList(methodWhiteList);
-        }
-
+        customizer.tokensBlacklist = [Types.LEFT_SHIFT_EQUAL]
+        shell.evaluate('int i=1;')
         assert hasSecurityException ({
-            shell.evaluate(script)
-        }, "TODO")
-
-        // 3. defined in BL
-        def methodBlackList = ["TODO"]
-        customizer.with {
-            setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
-        }
-
-        assert hasSecurityException ({
-            shell.evaluate(script)
-        }, "TODO")
+            shell.evaluate("""
+                def i = new int[1];i[0]=1;i[0]<<=3
+            """)
+        }, "Token (\"<<=\" at 2:47:  \"<<=\" ) is not allowed")
     }
 
     // TODO
