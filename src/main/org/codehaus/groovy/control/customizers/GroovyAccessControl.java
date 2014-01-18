@@ -42,8 +42,10 @@ public class GroovyAccessControl {
     private final Map<String,List<List<String>>> binaryOperatorBlackList;
     private final List<String> methodPointersOnReceiverWhitelist;
     private final List<String> methodPointersOnReceiverBlacklist;
+    private final List<String> propertiesWhiteList;
+    private final List<String> propertiesBlackList;
 
-    public GroovyAccessControl(ArrayList methodWhitelist, ArrayList methodBlacklist, ArrayList methodPointerWhitelist, ArrayList methodPointerBlacklist,Map binaryWhiteList, Map binaryBlackList) {
+    public GroovyAccessControl(ArrayList methodWhitelist, ArrayList methodBlacklist, ArrayList methodPointerWhitelist, ArrayList methodPointerBlacklist,Map binaryWhiteList, Map binaryBlackList, ArrayList propertiesWhiteList, ArrayList propertiesBlackList) {
         if(methodWhitelist != null) {
             this.methodsOnReceiverWhitelist = Collections.unmodifiableList(methodWhitelist);
         } else {
@@ -78,6 +80,20 @@ public class GroovyAccessControl {
         else {
             this.binaryOperatorBlackList = null;
         }
+
+        if(propertiesWhiteList != null){
+            this.propertiesWhiteList = Collections.unmodifiableList(propertiesWhiteList);
+        }
+        else {
+            this.propertiesWhiteList = null;
+        }
+        if(propertiesBlackList != null){
+            this.propertiesBlackList = Collections.unmodifiableList(propertiesBlackList);
+        }
+        else {
+            this.propertiesBlackList = null;
+        }
+
 
     }
 
@@ -159,4 +175,20 @@ public class GroovyAccessControl {
 
         return closure.call(left, right);
     }
+
+    public Object checkPropertyNode(Object receiver, String name, Closure closure) {
+        String clazz = extractClassNameForReceiver(receiver);
+        if (propertiesBlackList != null) {
+            if(propertiesBlackList.contains(clazz + "." + name)) {
+                throw new SecurityException(clazz + "." + name + " is not allowed ...........");
+            }
+        }
+        if (propertiesWhiteList != null) {
+            if(!propertiesWhiteList.contains(clazz + "." + name)) {
+                throw new SecurityException(clazz + "." + name + " is not allowed ...........");
+            }
+        }
+        return closure.call(clazz, name);
+    }
+
 }

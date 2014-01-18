@@ -46,6 +46,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
     private List<String> methodPointersWhiteList;
     private List<String> methodPointersBlackList;
 
+    private List<String> propertiesWhiteList;
+    private List<String> propertiesBlackList;
+
     public static final ClassNode GAC_CLASS = ClassHelper.make(GroovyAccessControl.class);
 
 
@@ -117,6 +120,28 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
     public List<String> getMethodPointersWhiteList() {
         return methodPointersWhiteList;
+    }
+
+    public List<String> getPropertiesWhiteList() {
+        return propertiesWhiteList;
+    }
+
+    public void setPropertiesWhiteList(List<String> propertiesWhiteList) {
+        if (propertiesBlackList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both propertiesWhitelist and propertiesBlacklist");
+        }
+        this.propertiesWhiteList = propertiesWhiteList;
+    }
+
+    public List<String> getPropertiesBlackList() {
+        return propertiesBlackList;
+    }
+
+    public void setPropertiesBlackList(List<String> propertiesBlackList) {
+        if (propertiesWhiteList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both propertiesWhitelist and propertiesBlacklist");
+        }
+        this.propertiesBlackList = propertiesBlackList;
     }
 
     @Override
@@ -191,8 +216,6 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             expression.addExpression(ConstantExpression.NULL);
         }
 
-
-
         if(getBinaryOperatorWhiteList() != null) {
             MapExpression map = new MapExpression();
             for(Map.Entry entry : getBinaryOperatorWhiteList().entrySet()) {
@@ -228,8 +251,29 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             expression.addExpression(ConstantExpression.NULL);
         }
 
-
-//      }
+        // Properties WL / BL
+        if(getPropertiesWhiteList() != null) {
+            ListExpression array = new ListExpression();
+            for(String whiteListElement : getPropertiesWhiteList()) {
+                array.addExpression(new ConstantExpression(whiteListElement));
+            }
+            List<PropertyNode> properties = classNode.getProperties();
+            for(PropertyNode propertyNode : properties) {
+                array.addExpression(new ConstantExpression(propertyNode.getDeclaringClass() + "." + propertyNode.getName()));
+            }
+            expression.addExpression(array);
+        } else {
+            expression.addExpression(ConstantExpression.NULL);
+        }
+        if(getPropertiesBlackList() != null) {
+            ListExpression array = new ListExpression();
+            for(String blackListElement : getPropertiesBlackList()) {
+                array.addExpression(new ConstantExpression(blackListElement));
+            }
+            expression.addExpression(array);
+      } else {
+        expression.addExpression(ConstantExpression.NULL);
+      }
 
         classNode.addFieldFirst("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, GAC_CLASS, new ConstructorCallExpression(GAC_CLASS, expression));
 
@@ -391,8 +435,21 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
             if(exp instanceof PropertyExpression) {
                 PropertyExpression expression = (PropertyExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return expression;
+
+                Expression closureExpression = new ConstructorCallExpression(
+                        ClassHelper.make(PropertyCallClosure.class),
+                        ArgumentListExpression.EMPTY_ARGUMENTS
+                );
+
+                ArgumentListExpression groovyAccessControlArguments = new ArgumentListExpression(
+                        transform(expression.getObjectExpression()),
+                        transform(expression.getProperty()),
+                        closureExpression
+                );
+
+                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", GAC_CLASS), "checkPropertyNode", groovyAccessControlArguments);
+                methodCallExpression.setSourcePosition(exp);
+                return methodCallExpression;
             }
 
             if(exp instanceof AttributeExpression) {
@@ -507,5 +564,17 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return InvokerHelper.invokeMethod(receiver, message, args);
             }
         }
+
+    }
+
+    public static class PropertyCallClosure extends Closure {
+        public PropertyCallClosure() {
+            super(null, null);
+        }
+
+        public Object doCall(Object receiver, String message) {
+            return InvokerHelper.getProperty(receiver, message);
+        }
+
     }
 }
