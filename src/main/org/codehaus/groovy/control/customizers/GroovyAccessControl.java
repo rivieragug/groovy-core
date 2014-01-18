@@ -17,10 +17,9 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
+import org.codehaus.groovy.syntax.Token;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * TODO Add JavaDocs
@@ -36,10 +35,12 @@ public class GroovyAccessControl {
     // methods for a given receiver, syntax like MyReceiver.myMethod
     private final List<String> methodsOnReceiverWhitelist;
     private final List<String> methodsOnReceiverBlacklist;
+    private final Map<String,List<List<String>>> binaryOperatorWhiteList;
+    private final Map<String,List<List<String>>> binaryOperatorBlackList;
     private final List<String> methodPointersOnReceiverWhitelist;
     private final List<String> methodPointersOnReceiverBlacklist;
 
-    public GroovyAccessControl(ArrayList methodWhitelist, ArrayList methodBlacklist, ArrayList methodPointerWhitelist, ArrayList methodPointerBlacklist) {
+    public GroovyAccessControl(ArrayList methodWhitelist, ArrayList methodBlacklist, ArrayList methodPointerWhitelist, ArrayList methodPointerBlacklist,Map binaryWhiteList, Map binaryBlackList) {
         if(methodWhitelist != null) {
             this.methodsOnReceiverWhitelist = Collections.unmodifiableList(methodWhitelist);
         } else {
@@ -51,6 +52,7 @@ public class GroovyAccessControl {
             this.methodsOnReceiverBlacklist = null;
         }
 
+
         if(methodPointerWhitelist != null) {
             this.methodPointersOnReceiverWhitelist = Collections.unmodifiableList(methodPointerWhitelist);
         } else {
@@ -61,6 +63,19 @@ public class GroovyAccessControl {
         } else {
             this.methodPointersOnReceiverBlacklist = null;
         }
+        if(binaryWhiteList != null){
+            this.binaryOperatorWhiteList = Collections.unmodifiableMap(binaryWhiteList);
+        }
+        else {
+            this.binaryOperatorWhiteList = null;
+        }
+        if(binaryBlackList != null){
+            this.binaryOperatorBlackList = Collections.unmodifiableMap(binaryBlackList);
+        }
+        else {
+            this.binaryOperatorBlackList = null;
+        }
+
     }
 
     public Object checkCall(String clazz, String methodCall, Closure closure) {
@@ -95,4 +110,42 @@ public class GroovyAccessControl {
 
         return closure.call();
     }
+
+    public Object checkBinaryExpression(String token, Object left, Object right, Closure closure){
+        String clazzLeft = left== null ? "null" : left.getClass().getName();
+        String clazzRight = right== null ? "null" : right.getClass().getName();
+        if(binaryOperatorBlackList != null) {
+            if(binaryOperatorBlackList.containsKey(token)){
+               List<List<String>> list = binaryOperatorBlackList.get(token);
+               for(List<String> tuple : list){
+                  //TODO add uni test for list size==2
+                   if(tuple.get(0).equals(clazzLeft) && tuple.get(1).equals(clazzRight)){
+                      throw new SecurityException(clazzLeft + " " + token + " "  + clazzRight+ " is not allowed ..........." );
+                   }
+               }
+            }
+        }
+
+        if(binaryOperatorWhiteList != null) {
+            if(binaryOperatorWhiteList.containsKey(token)){
+                List<List<String>> list = binaryOperatorWhiteList.get(token);
+                boolean found =  false;
+                for(List<String> tuple : list){
+                    //TODO add uni test for list size==2
+                    if(tuple.get(0).equals(clazzLeft) && tuple.get(1).equals(clazzRight)){
+                        found = true;
+                        break;
+                    }
+                }
+                if (! found) {
+                    throw new SecurityException(clazzLeft + " " + token + " "  + clazzRight+ " is not allowed ..........." );
+                }
+            }
+        }
+
+
+        return closure.call();
+    }
+
+
 }
