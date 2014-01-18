@@ -1377,10 +1377,10 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "org.codehaus.groovy.runtime.NullObject.getClass")
+        }, "null.getClass")
 
         // 3. defined in BL
-        def methodBlackList = ["org.codehaus.groovy.runtime.NullObject.getClass"]
+        def methodBlackList = ["null.getClass"]
         customizer.with {
             setMethodsWhiteList(null);
             setMethodsBlackList(methodBlackList);
@@ -1388,7 +1388,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "org.codehaus.groovy.runtime.NullObject.getClass")
+        }, "null.getClass")
     }
 
     void testNullBehaviorAssignment() {
