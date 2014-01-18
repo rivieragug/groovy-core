@@ -37,6 +37,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
     // TODO move methods to compile time check
     private List<String> methodsWhiteList;
     private List<String> methodsBlackList;
+    public static final ClassNode GAC_CLASS = ClassHelper.make(GroovyAccessControl.class);
 
     public SecureRuntimeASTCustomizer() {
         super();
@@ -110,7 +111,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             expression.addExpression(ConstantExpression.NULL);
         }
 //      }
-        classNode.addFieldFirst("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, new ClassNode(GroovyAccessControl.class), new ConstructorCallExpression(new ClassNode(GroovyAccessControl.class), expression));
+        classNode.addFieldFirst("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, GAC_CLASS, new ConstructorCallExpression(GAC_CLASS, expression));
 
         VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
         scopeVisitor.visitClass(classNode);
@@ -153,7 +154,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
                 expression.setArguments(transform(expression.getArguments()));
 
-                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", groovyAccessControlArguments);
+                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", GAC_CLASS), "checkCall", groovyAccessControlArguments);
                 methodCallExpression.setSourcePosition(exp);
                 return methodCallExpression;
             }
@@ -174,7 +175,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
                 expression.setArguments(transform(expression.getArguments()));
 
-                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", GAC_CLASS), "checkCall", newMethodCallArguments);
                 methodCallExpression.setSourcePosition(exp);
                 return methodCallExpression;
             }
@@ -191,7 +192,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                         new ConstantExpression(expression.getType().getName()),
                         new ConstantExpression("new"));
 
-                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
+                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", GAC_CLASS), "checkCall", newMethodCallArguments);
                 methodCallExpression.setSourcePosition(exp);
                 return methodCallExpression;
             }
