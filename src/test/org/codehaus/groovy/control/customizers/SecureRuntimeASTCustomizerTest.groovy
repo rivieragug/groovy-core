@@ -952,8 +952,8 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
-        // 2. not defined in WL
-        def methodWhiteList = ["java.lang.Object", "TODO"]
+       /* // 2. not defined in WL
+        def methodWhiteList = ["java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
@@ -961,18 +961,19 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "TODO")
-
+        }, "White list - Should throw Security Exception")
+*/
         // 3. defined in BL
-        def methodBlackList = ["TODO"]
+        def operatorBlackList = ["[": [["[I", "java.lang.Integer"]]]
+        configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            setBinaryOperatorBlackList(operatorBlackList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "TODO")
+        }, "[I [ java.lang.Integer is not allowed")
     }
 
     // TODO Array set

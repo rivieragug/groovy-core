@@ -37,6 +37,8 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
     // TODO move methods to compile time check
     private List<String> methodsWhiteList;
     private List<String> methodsBlackList;
+    private Map<String,List<List<String>>> binaryOperatorWhiteList;
+    private Map<String,List<List<String>>> binaryOperatorBlackList;
 
     private List<String> methodPointersWhiteList;
     private List<String> methodPointersBlackList;
@@ -53,6 +55,28 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             throw new IllegalArgumentException("You are not allowed to set both whitelist and blacklist");
         }
         this.methodsBlackList = methodsBlackList;
+    }
+
+    public Map<String, List<List<String>>> getBinaryOperatorWhiteList() {
+        return binaryOperatorWhiteList;
+    }
+
+    public void setBinaryOperatorWhiteList(Map<String, List<List<String>>> binaryOperatorWhiteList) {
+        if (binaryOperatorBlackList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both whiteBinarylist and blackBinarylist");
+        }
+        this.binaryOperatorWhiteList = binaryOperatorWhiteList;
+    }
+
+    public Map<String, List<List<String>>> getBinaryOperatorBlackList() {
+        return binaryOperatorBlackList;
+    }
+
+    public void setBinaryOperatorBlackList(Map<String, List<List<String>>> binaryOperatorBlackList) {
+        if (binaryOperatorWhiteList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both whiteBinarylist and blackBinarylist");
+        }
+        this.binaryOperatorBlackList = binaryOperatorBlackList;
     }
 
     public List<String> getMethodsBlackList() {
@@ -122,6 +146,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             for(MethodNode methodNode : methods) {
                 array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + "." + methodNode.getName()));
             }
+
             // Need to add all the method of other class
             // even inner class ? or just className.*
             expression.addExpression(array);
@@ -163,6 +188,44 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         } else {
             expression.addExpression(ConstantExpression.NULL);
         }
+
+
+
+        if(getBinaryOperatorWhiteList() != null) {
+            MapExpression map = new MapExpression();
+            for(Map.Entry entry : getBinaryOperatorWhiteList().entrySet()) {
+                ListExpression le = new ListExpression();
+                for (List<String> pair: (List<List<String>>)entry.getValue()){
+                    ListExpression pairExpression = new ListExpression();
+                    pairExpression.addExpression(new ConstantExpression(pair.get(0)));
+                    pairExpression.addExpression(new ConstantExpression(pair.get(1)));
+                    le.addExpression(pairExpression);
+                }
+                map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression(entry.getKey()),le ) );
+            }
+            expression.addExpression(map);
+        } else {
+            expression.addExpression(ConstantExpression.NULL);
+        }
+
+        if(getBinaryOperatorBlackList() != null) {
+            MapExpression map = new MapExpression();
+            for(Map.Entry entry : getBinaryOperatorBlackList().entrySet()) {
+                ListExpression le = new ListExpression();
+                for (List<String> pair: (List<List<String>>)entry.getValue()){
+                    ListExpression pairExpression = new ListExpression();
+                    pairExpression.addExpression(new ConstantExpression(pair.get(0)));
+                    pairExpression.addExpression(new ConstantExpression(pair.get(1)));
+                    le.addExpression(pairExpression);
+                }
+                map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression(entry.getKey()),le ) );
+            }
+
+            expression.addExpression(map);
+        } else {
+            expression.addExpression(ConstantExpression.NULL);
+        }
+
 
 //      }
 
@@ -216,8 +279,16 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
             if(exp instanceof BinaryExpression) {
                 BinaryExpression expression = (BinaryExpression)exp;
-                expression.setLeftExpression(transform(expression.getLeftExpression()));
                 expression.setRightExpression(transform(expression.getRightExpression()));
+
+                if(!(exp instanceof DeclarationExpression)){
+                    expression.setLeftExpression(transform(expression.getLeftExpression()));
+                    ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(expression);
+                    return new MethodCallExpression(
+                            new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)),
+                            "checkBinaryExpression", argumentListExpression);
+                }
+
                 return expression;
             }
 
@@ -383,6 +454,27 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             arguments.addExpression(methodExpression);
             arguments.addExpression(closureExpression);
             return arguments;
+        }
+
+        private ArgumentListExpression getArgumentsExpressionForCheckBinaryCall(BinaryExpression binaryExpression){
+            BlockStatement blockStatement = new BlockStatement();
+
+            Parameter left = new Parameter(ClassHelper.GROOVY_OBJECT_TYPE, "left");
+            Parameter right = new Parameter(ClassHelper.GROOVY_OBJECT_TYPE, "right");
+
+            BinaryExpression be = new BinaryExpression(new VariableExpression(left),binaryExpression.getOperation(), new VariableExpression(right));
+
+            ExpressionStatement expressionStatement = new ExpressionStatement(be);
+            blockStatement.addStatement(expressionStatement);
+            ClosureExpression closureExpression = new ClosureExpression(new Parameter[]{left,right}, blockStatement);
+            ArgumentListExpression arguments = new ArgumentListExpression();
+
+            arguments.addExpression(new ConstantExpression(binaryExpression.getOperation().getText()));
+            arguments.addExpression(binaryExpression.getLeftExpression());
+            arguments.addExpression(binaryExpression.getRightExpression());
+            arguments.addExpression(closureExpression);
+            return arguments;
+
         }
     }
 }
