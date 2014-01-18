@@ -983,22 +983,39 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
-       /* // 2. not defined in WL
-        def methodWhiteList = ["java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
+
+        // 2. not defined in WL
+        def binaryOperatorWhiteList = ["[": [["[I", "java.lang.Long"]]]
         customizer.with {
-            setMethodsWhiteList(methodWhiteList);
+            setBinaryOperatorWhiteList(binaryOperatorWhiteList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "White list - Should throw Security Exception")
-*/
-        // 3. defined in BL
-        def operatorBlackList = ["[": [["[I", "java.lang.Integer"]]]
-        configuration.addCompilationCustomizers(customizer)
+        }, "[I [ java.lang.Integer is not allowed ...........")
+
+        // 2. defined in WL
+        binaryOperatorWhiteList = ["[": [["[I", "java.lang.Integer"]]]
         customizer.with {
-            setMethodsWhiteList(null);
+            setBinaryOperatorWhiteList(binaryOperatorWhiteList);
+        }
+        shell.evaluate(script)
+
+
+        // 3. not defined in BL
+
+        def operatorBlackList = ["[": [["[I", "java.lang.Long"]]]
+        customizer.with {
+            setBinaryOperatorWhiteList(null);
+            setBinaryOperatorBlackList(operatorBlackList);
+        }
+        shell.evaluate(script)
+
+        // 4. defined in BL
+        operatorBlackList = ["[": [["[I", "java.lang.Integer"]]]
+        customizer.with {
+            setBinaryOperatorWhiteList(null);
             setBinaryOperatorBlackList(operatorBlackList);
         }
 
