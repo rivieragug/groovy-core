@@ -628,33 +628,37 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            def alias = ((Object)new ArrayList()).&clear
+            def alias = (new ArrayList()).&clear
             alias()
         """
         shell.evaluate(script)
         // no error means success
+        configuration.addCompilationCustomizers(customizer)
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object", "org.codehaus.groovy.runtime.MethodClosure.call"]
-        configuration.addCompilationCustomizers(customizer)
+        /*def methodWhiteList = ["java.util.ArrayList", "java.util.ArrayList.ctor", "java.lang.Object"]
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
+            setMethodPointersWhiteList(methodWhiteList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.util.ArrayList.clear")
+        }, "java.util.ArrayList.clear")  */
 
         // 3. defined in BL
         def methodBlackList = ["java.util.ArrayList.clear"]
         customizer.with {
             setMethodsWhiteList(null);
+            setMethodPointersWhiteList(null);
             setMethodsBlackList(methodBlackList);
+            setMethodPointersBlackList(methodBlackList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
         }, "java.util.ArrayList.clear")
+
     }
 
     //TODO 'foo'.toString().hashCode()

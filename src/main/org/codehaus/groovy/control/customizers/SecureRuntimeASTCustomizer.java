@@ -37,6 +37,8 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
     // TODO move methods to compile time check
     private List<String> methodsWhiteList;
     private List<String> methodsBlackList;
+    private List<String> methodPointersWhiteList;
+    private List<String> methodPointersBlackList;
 
     public SecureRuntimeASTCustomizer() {
         super();
@@ -62,6 +64,28 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
     public List<String> getMethodsWhiteList() {
         return methodsWhiteList;
+    }
+
+    public void setMethodPointersBlackList(final List<String> methodsBlackList) {
+        if (methodPointersWhiteList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both methodPointerWhitelist and methodPointerBlacklist");
+        }
+        this.methodPointersBlackList = methodsBlackList;
+    }
+
+    public List<String> getMethodPointersBlackList() {
+        return methodPointersBlackList;
+    }
+
+    public void setMethodPointersWhiteList(final List<String> methodPointersWhiteList) {
+        if (methodPointersBlackList != null) {
+            throw new IllegalArgumentException("You are not allowed to set both methodPointerWhitelist and methodPointerBlacklist");
+        }
+        this.methodPointersWhiteList = methodPointersWhiteList;
+    }
+
+    public List<String> getMethodPointersWhiteList() {
+        return methodPointersWhiteList;
     }
 
     @Override
@@ -99,8 +123,36 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         } else {
             expression.addExpression(ConstantExpression.NULL);
         }
+
+        // TODO: To revisit
+        if(getMethodPointersWhiteList() != null) {
+            ListExpression array = new ListExpression();
+            for(String whiteListElement : getMethodPointersWhiteList()) {
+                array.addExpression(new ConstantExpression(whiteListElement));
+            }
+            List<MethodNode> methods = filterMethods(classNode);
+            for(MethodNode methodNode : methods) {
+                array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + "." + methodNode.getName()));
+            }
+            // Need to add all the method of other class
+            // even inner class ? or just className.*
+            expression.addExpression(array);
+        } else {
+            expression.addExpression(ConstantExpression.NULL);
+        }
+        if(getMethodPointersBlackList() != null) {
+            ListExpression array = new ListExpression();
+            for(String blackListElement : getMethodPointersBlackList()) {
+                array.addExpression(new ConstantExpression(blackListElement));
+            }
+            expression.addExpression(array);
+        } else {
+            expression.addExpression(ConstantExpression.NULL);
+        }
+
 //      }
-        classNode.addField("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, new ClassNode(GroovyAccessControl.class), new ConstructorCallExpression(new ClassNode(GroovyAccessControl.class), expression));
+        classNode.addField("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC,
+                new ClassNode(GroovyAccessControl.class), new ConstructorCallExpression(new ClassNode(GroovyAccessControl.class), expression));
 
         VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
         scopeVisitor.visitClass(classNode);
@@ -258,8 +310,11 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
             if(exp instanceof MethodPointerExpression) {
                 MethodPointerExpression expression = (MethodPointerExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return expression;
+                ArgumentListExpression newMethodCallArguments = getArgumentsExpressionsForClosureCall(expression,
+                        new ConstantExpression(expression.getExpression().getType().getName()),
+                        expression.getMethodName());
+
+                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkMethodPointerDeclaration", newMethodCallArguments);
             }
 
             if(exp instanceof ConstantExpression) {
