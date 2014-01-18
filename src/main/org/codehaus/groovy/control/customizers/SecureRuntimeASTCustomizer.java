@@ -184,7 +184,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 ConstructorCallExpression expression = (ConstructorCallExpression)exp;
                 ArgumentListExpression newMethodCallArguments = getArgumentsExpressionsForClosureCall(expression,
                         new ConstantExpression(expression.getType().getName()),
-                        new ConstantExpression("ctor"));
+                        new ConstantExpression("new"));
 
                 MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkCall", newMethodCallArguments);
                 methodCallExpression.setSourcePosition(exp);
