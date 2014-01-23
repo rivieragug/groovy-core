@@ -569,11 +569,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         }
 
         public Object doCall(Object receiver, String message) {
-            if (receiver instanceof GroovyObject) {
-                return InvokerHelper.getGroovyObjectProperty((GroovyObject)receiver, message);
-            } else {
-                return InvokerHelper.getProperty(receiver, message);
-            }
+            return InvokerHelper.getProperty(receiver, message);
         }
 
     }
