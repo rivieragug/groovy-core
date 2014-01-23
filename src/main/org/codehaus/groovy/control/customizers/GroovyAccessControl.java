@@ -17,6 +17,8 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
+import org.codehaus.groovy.ast.PropertyNode;
+import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.runtime.MethodClosure;
 
 import java.util.ArrayList;

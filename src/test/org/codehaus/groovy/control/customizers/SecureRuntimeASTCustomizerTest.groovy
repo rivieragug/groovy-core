@@ -742,7 +742,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
-        // 2.2  not defined in WL
+        // 2.1  not defined in WL
         def propertyWhiteList = ["java.lang.String.prop" ]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
@@ -773,7 +773,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.String.class")
     }
 
-    // TODO 'foo'.class.name
     void testClassGetName() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -783,22 +782,31 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
         // no error means success
 
-        // 2. not defined in WL
-        def methodWhiteList = ["java.lang.String","java.lang.String.getClass","java.lang.Object", ]
+        // 2.1 not defined in WL
+        def propertyWhiteList = ["java.lang.String.prop", "java.lang.String.getClass",
+            "java.lang.Object", "java.lang.String", "java.lang.String.class"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setMethodsWhiteList(methodWhiteList);
+            setPropertiesWhiteList(propertyWhiteList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.lang.Class.getName")
+        }, "java.lang.String.class.name")
+
+        // 2.2  defined in WL
+        propertyWhiteList = ["java.lang.String.class.name"]
+        customizer.with {
+            setPropertiesWhiteList(propertyWhiteList);
+        }
+
+        shell.evaluate(script)
 
         // 3. defined in BL
-        def methodBlackList = ["java.lang.Class.getName"]
+        def propertyBlackList = ["java.lang.String.class.name"]
         customizer.with {
-            setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            setPropertiesWhiteList(null);
+            setPropertiesBlackList(propertyBlackList);
         }
 
         assert hasSecurityException ({
@@ -806,39 +814,38 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.Class.getName")
     }
 
-    // TODO new java.awt.Point(1,2).@x
     void testPropertyDirectGet() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
         String script = """
            import java.awt.Point
            Point point  = new Point(1, 2)
-           point.@x
+           point.x
         """
         shell.evaluate(script)
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object"]
+        def propertyWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setMethodsWhiteList(methodWhiteList);
+            setPropertiesWhiteList(propertyWhiteList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "TODO")
+        }, "java.awt.Point.x")
 
         // 3. defined in BL
-        def methodBlackList = ["TODO"]
+        def propertyBlackList = ["java.awt.Point.x"]
         customizer.with {
-            setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            setPropertiesWhiteList(null);
+            setPropertiesBlackList(propertyBlackList);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "TODO")
+        }, "java.awt.Point.x")
     }
 
 

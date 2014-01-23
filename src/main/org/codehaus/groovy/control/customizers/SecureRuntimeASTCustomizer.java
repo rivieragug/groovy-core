@@ -17,6 +17,7 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
+import groovy.lang.GroovyObject;
 import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.ast.expr.*;
 import org.codehaus.groovy.ast.stmt.*;
@@ -257,10 +258,6 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             for(String whiteListElement : getPropertiesWhiteList()) {
                 array.addExpression(new ConstantExpression(whiteListElement));
             }
-            List<PropertyNode> properties = classNode.getProperties();
-            for(PropertyNode propertyNode : properties) {
-                array.addExpression(new ConstantExpression(propertyNode.getDeclaringClass() + "." + propertyNode.getName()));
-            }
             expression.addExpression(array);
         } else {
             expression.addExpression(ConstantExpression.NULL);
@@ -271,9 +268,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 array.addExpression(new ConstantExpression(blackListElement));
             }
             expression.addExpression(array);
-      } else {
-        expression.addExpression(ConstantExpression.NULL);
-      }
+        } else {
+            expression.addExpression(ConstantExpression.NULL);
+        }
 
         classNode.addFieldFirst("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, GAC_CLASS, new ConstructorCallExpression(GAC_CLASS, expression));
 
@@ -441,7 +438,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 );
 
                 ArgumentListExpression groovyAccessControlArguments = new ArgumentListExpression(
-                        transform(expression.getObjectExpression()),
+                        transform(expression.getObjectExpression()), // here is it String instead of class - need to keep the value
                         transform(expression.getProperty()),
                         closureExpression
                 );
@@ -572,7 +569,11 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         }
 
         public Object doCall(Object receiver, String message) {
-            return InvokerHelper.getProperty(receiver, message);
+            if (receiver instanceof GroovyObject) {
+                return InvokerHelper.getGroovyObjectProperty((GroovyObject)receiver, message);
+            } else {
+                return InvokerHelper.getProperty(receiver, message);
+            }
         }
 
     }
