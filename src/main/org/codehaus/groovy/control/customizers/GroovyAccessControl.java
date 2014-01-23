@@ -191,7 +191,7 @@ public class GroovyAccessControl {
                 throw new SecurityException(clazz + "." + name + " is not allowed ...........");
             }
         }
-        return closure.call(clazz, name);
+        return closure.call(receiver, name);
     }
 
 }

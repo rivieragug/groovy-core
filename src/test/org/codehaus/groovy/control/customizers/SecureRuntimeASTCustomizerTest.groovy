@@ -792,10 +792,10 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.lang.String.class.name")
+        }, "java.lang.String.name")
 
         // 2.2  defined in WL
-        propertyWhiteList = ["java.lang.String.class.name"]
+        propertyWhiteList = ["java.lang.String.name", "java.lang.String.class"]
         customizer.with {
             setPropertiesWhiteList(propertyWhiteList);
         }
@@ -803,7 +803,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         shell.evaluate(script)
 
         // 3. defined in BL
-        def propertyBlackList = ["java.lang.String.class.name"]
+        def propertyBlackList = ["java.lang.String.name"]
         customizer.with {
             setPropertiesWhiteList(null);
             setPropertiesBlackList(propertyBlackList);
@@ -811,7 +811,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.lang.Class.getName")
+        }, "java.lang.String.name")
     }
 
     void testPropertyDirectGet() {

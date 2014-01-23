@@ -17,7 +17,6 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
-import groovy.lang.GroovyObject;
 import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.ast.expr.*;
 import org.codehaus.groovy.ast.stmt.*;
@@ -26,7 +25,6 @@ import org.codehaus.groovy.classgen.VariableScopeVisitor;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.runtime.InvokerHelper;
-import org.codehaus.groovy.syntax.Types;
 
 import java.util.*;
 
@@ -429,6 +427,12 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return expression;
             }
 
+            if(exp instanceof VariableExpression) {
+                VariableExpression expression = (VariableExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
             if(exp instanceof PropertyExpression) {
                 PropertyExpression expression = (PropertyExpression)exp;
 
@@ -438,7 +442,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 );
 
                 ArgumentListExpression groovyAccessControlArguments = new ArgumentListExpression(
-                        transform(expression.getObjectExpression()), // here is it String instead of class - need to keep the value
+                        transform(expression.getObjectExpression()),
                         transform(expression.getProperty()),
                         closureExpression
                 );
@@ -478,12 +482,6 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
             if(exp instanceof ClassExpression) {
                 ClassExpression expression = (ClassExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return expression;
-            }
-
-            if(exp instanceof VariableExpression) {
-                VariableExpression expression = (VariableExpression)exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return expression;
             }
