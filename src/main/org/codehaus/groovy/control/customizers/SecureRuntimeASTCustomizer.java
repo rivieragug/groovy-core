@@ -368,6 +368,12 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return expression;
             }
 
+            if(exp instanceof ClassExpression) {
+                ClassExpression expression = (ClassExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
             if(exp instanceof ElvisOperatorExpression) {
                 ElvisOperatorExpression expression = (ElvisOperatorExpression)exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
