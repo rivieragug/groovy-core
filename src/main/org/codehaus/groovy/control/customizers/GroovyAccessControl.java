@@ -17,14 +17,11 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
-import org.codehaus.groovy.ast.PropertyNode;
-import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.runtime.MethodClosure;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.lang.reflect.Method;
 
 /**
  * TODO Add JavaDocs
@@ -98,36 +95,97 @@ public class GroovyAccessControl {
 
 
     }
-
     public Object checkCall(Object receiver, String methodName, Object[] args, Closure closure) {
-        String clazz = extractClassNameForReceiver(receiver);
-        if (methodsOnReceiverBlacklist != null) {
-            if(methodsOnReceiverBlacklist.contains(clazz + "." + methodName)) {
-                throw new SecurityException(clazz + "." + methodName + " is not allowed ...........");
-            }
-        }
-        if (methodsOnReceiverWhitelist != null) {
-            if(!methodsOnReceiverWhitelist.contains(clazz + "." + methodName)) {
-                throw new SecurityException(clazz + "." + methodName + " is not allowed ...........");
+        if(receiver != null) {
+            if (receiver instanceof Class) {
+                if (methodName.equals("new")) {
+                    String ctor = findConstructorForClass(receiver.getClass(), null);
+                    if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(((Class) receiver).getName() + "." + ctor)) {
+                        throw new SecurityException(((Class) receiver).getName() + "." + ctor + " is not allowed ...........");
+                    }
+                } else {
+                    //For static method
+                    String methodFromReceiver = isCallOnObjectReceiverAllowed(receiver.getClass(), methodName, args, closure);
+                    if(methodFromReceiver != null) {
+                        if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(methodFromReceiver)) {
+                            throw new SecurityException(methodFromReceiver + " is not allowed ...........");
+                        }
+                    }
+                    String methodFromClass = isCallOnObjectReceiverAllowed((Class)receiver, methodName, args, closure);
+                    if(methodFromClass != null) {
+                        if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(methodFromClass)) {
+                            throw new SecurityException(methodFromClass + " is not allowed ...........");
+                        }
+                        if (methodsOnReceiverWhitelist != null && !methodsOnReceiverWhitelist.contains(methodFromClass)) {
+                            throw new SecurityException(methodFromClass + " is not allowed ...........");
+                        }
+                    }
+                    if((methodFromReceiver != null && methodFromClass == null) && methodsOnReceiverWhitelist != null) {
+                        throw new SecurityException(methodFromReceiver + " is not allowed ...........");
+                    }
+                }
+            } else {
+                String method = isCallOnObjectReceiverAllowed(receiver.getClass(), methodName, args, closure);
+                if(method != null) {
+                    if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(method)) {
+                        throw new SecurityException(method + " is not allowed ...........");
+                    }
+                    if (methodsOnReceiverWhitelist != null && !methodsOnReceiverWhitelist.contains(method)) {
+                        throw new SecurityException(method + " is not allowed ...........");
+                    }
+                }
             }
         }
         return closure.call(receiver, methodName, args);
     }
 
-    private String extractClassNameForReceiver(Object receiver) {
-        String clazz = "null";
+    private String isCallOnObjectReceiverAllowed(Class receiver, String methodName, Object[] args, Closure closure) {
+        String clazz = findClassForMethod(receiver, methodName, null);
+        if (clazz != null) {
+            return clazz + "." + methodName;
+        }
+        return null;
+    }
+
+    private String findConstructorForClass(Class<?> clazz, Class<?>... paramTypes) {
+        Constructor<?>[] constructors = clazz.getDeclaredConstructors();
+        if(constructors.length > 0) {
+            return "new";
+        }
+        return null;
+        //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
+    }
+    public String findClassForMethod(Class<?> clazz, String name, Class<?>... paramTypes) {
+        Class<?> searchType = clazz;
+        while (searchType != null) {
+            Method[] methods = (searchType.isInterface() ? searchType.getMethods() : searchType.getDeclaredMethods());
+            for (Method method : methods) {
+                if (name.equals(method.getName())) {
+                        //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
+                    return searchType.getName();
+                }
+            }
+            searchType = searchType.getSuperclass();
+        }
+        return null;
+    }
+
+
+    private Class extractClassForReceiver(Object receiver) {
         if (receiver != null) {
             if (receiver instanceof Class) {
-                clazz = ((Class) receiver).getName();
+                return ((Class) receiver);
             } else {
-                clazz = receiver.getClass().getName();
+                return receiver.getClass();
             }
         }
-        return clazz;
+        return null;
     }
 
     public Object checkMethodPointerDeclaration(Object receiver, String methodCall) {
-        String clazz = extractClassNameForReceiver(receiver);
+        Class toto = extractClassForReceiver(receiver);
+        String clazz = (toto != null) ? toto.getName() : "null";
+
         if (methodPointersOnReceiverBlacklist != null) {
             if(methodPointersOnReceiverBlacklist.contains(clazz + "." + methodCall)) {
                 throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
@@ -180,7 +238,8 @@ public class GroovyAccessControl {
     }
 
     public Object checkPropertyNode(Object receiver, String name, Closure closure) {
-        String clazz = extractClassNameForReceiver(receiver);
+        Class toto = extractClassForReceiver(receiver);
+        String clazz = (toto != null) ? toto.getName() : "null";
         if (propertiesBlackList != null) {
             if(propertiesBlackList.contains(clazz + "." + name)) {
                 throw new SecurityException(clazz + "." + name + " is not allowed ...........");
