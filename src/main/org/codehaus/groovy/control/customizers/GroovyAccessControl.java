@@ -237,6 +237,10 @@ public class GroovyAccessControl {
         return closure.call(left, right);
     }
 
+    public Object checkSetPropertyExpression(String token, Object left, Object right, Closure closure){
+    	//methodsOnReceiverBlacklist.contains(left.getClass() + ".set");
+    	return closure.call(left, right);
+    }
     public Object checkPropertyNode(Object receiver, String name, Closure closure) {
         Class toto = extractClassForReceiver(receiver);
         String clazz = (toto != null) ? toto.getName() : "null";

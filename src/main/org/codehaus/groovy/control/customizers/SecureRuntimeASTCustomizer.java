@@ -17,14 +17,19 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
+
 import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.ast.expr.*;
 import org.codehaus.groovy.ast.stmt.*;
+import org.codehaus.groovy.classgen.BytecodeExpression;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.classgen.VariableScopeVisitor;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.runtime.InvokerHelper;
+import org.codehaus.groovy.transform.sc.ListOfExpressionsExpression;
+import org.codehaus.groovy.transform.sc.transformers.CompareIdentityExpression;
+import org.codehaus.groovy.transform.sc.transformers.CompareToNullExpression;
 
 import java.util.*;
 
@@ -291,17 +296,23 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
         @Override
         public Expression transform(Expression exp) {
-            if(exp instanceof ArgumentListExpression) {
-                ArgumentListExpression expression = (ArgumentListExpression)exp;
-                Iterator<Expression> iterator = expression.iterator();
-                ArgumentListExpression arguments = new ArgumentListExpression();
-                while (iterator.hasNext()) {
-                    Expression exp1 = iterator.next();
-                    arguments.addExpression(transform(exp1));
-                }
-
-                arguments.setSourcePosition(exp);
-                return arguments;
+            System.out.println("Here is the " + exp);
+            if(exp instanceof TupleExpression) {
+            	if (exp instanceof ArgumentListExpression) { 
+	                ArgumentListExpression expression = (ArgumentListExpression)exp;
+	                Iterator<Expression> iterator = expression.iterator();
+	                ArgumentListExpression arguments = new ArgumentListExpression();
+	                while (iterator.hasNext()) {
+	                    Expression exp1 = iterator.next();
+	                    arguments.addExpression(transform(exp1));
+	                }
+	                arguments.setSourcePosition(exp);
+	                return arguments;
+            	} else {
+                    TupleExpression expression = (TupleExpression)exp;
+                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                    return expression;
+            	}
             }
 
             if (exp instanceof MethodCallExpression) {
@@ -319,14 +330,21 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
             if(exp instanceof BinaryExpression) {
                 BinaryExpression expression = (BinaryExpression)exp;
+                //CompareIdentityExpression
+                //CompareToNullExpression'
+                //DeclarationExpression
+                
                 expression.setRightExpression(transform(expression.getRightExpression()));
 
                 if(!(expression instanceof DeclarationExpression)){
+                	boolean setProperty = expression.getLeftExpression() instanceof AttributeExpression;
                     expression.setLeftExpression(transform(expression.getLeftExpression()));
                     ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(expression);
-                    return new MethodCallExpression(
+                    MethodCallExpression methodCallExpression = new MethodCallExpression(
                             new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)),
-                            "checkBinaryExpression", argumentListExpression);
+                            setProperty ? "checkSetPropertyExpression" : "checkBinaryExpression", argumentListExpression);
+                    methodCallExpression.setSourcePosition(exp);
+                    return methodCallExpression;
                 }
                 return expression;
             }
@@ -362,20 +380,26 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return methodCallExpression;
             }
 
-            if(exp instanceof TernaryExpression) {
-                TernaryExpression expression = (TernaryExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return expression;
-            }
-
             if(exp instanceof ClassExpression) {
                 ClassExpression expression = (ClassExpression)exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return expression;
             }
 
-            if(exp instanceof ElvisOperatorExpression) {
-                ElvisOperatorExpression expression = (ElvisOperatorExpression)exp;
+            if(exp instanceof TernaryExpression) {
+                if(exp instanceof ElvisOperatorExpression) {
+                    ElvisOperatorExpression expression = (ElvisOperatorExpression)exp;
+                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                    return expression;
+                } else {
+	                TernaryExpression expression = (TernaryExpression)exp;
+	                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+	                return expression;
+                }
+            }
+            
+            if(exp instanceof SpreadExpression) {
+            	SpreadExpression expression = (SpreadExpression)exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return expression;
             }
@@ -405,6 +429,11 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             }
 
             if(exp instanceof MapExpression) {
+                if(exp instanceof NamedArgumentListExpression) {
+                	NamedArgumentListExpression expression = (NamedArgumentListExpression)exp;
+                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                    return expression;
+                }
                 MapExpression expression = (MapExpression)exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return expression;
@@ -417,6 +446,11 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             }
 
             if(exp instanceof ListExpression) {
+                if(exp instanceof ClosureListExpression) {
+                	ClosureListExpression expression = (ClosureListExpression)exp;
+                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                    return expression;
+                }
                 ListExpression expression = (ListExpression)exp;
                 List<Expression> list = expression.getExpressions();
                 ListExpression transformed = new ListExpression();
@@ -440,6 +474,13 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             }
 
             if(exp instanceof PropertyExpression) {
+            	// AttributeExpression
+                if(exp instanceof AttributeExpression) {
+                    AttributeExpression expression = (AttributeExpression)exp;
+                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                    return expression;
+                }
+
                 PropertyExpression expression = (PropertyExpression)exp;
 
                 Expression closureExpression = new ConstructorCallExpression(
@@ -458,12 +499,6 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return methodCallExpression;
             }
 
-            if(exp instanceof AttributeExpression) {
-                AttributeExpression expression = (AttributeExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return expression;
-            }
-
             if(exp instanceof FieldExpression) {
                 FieldExpression expression = (FieldExpression)exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
@@ -477,10 +512,18 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                                 transform(expression.getExpression()),
                                 expression.getMethodName()
                         );
-                return new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkMethodPointerDeclaration", newMethodCallArguments);
+                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkMethodPointerDeclaration", newMethodCallArguments);
+                methodCallExpression.setSourcePosition(exp);
+                return methodCallExpression;
             }
 
             if(exp instanceof ConstantExpression) {
+                if(exp instanceof AnnotationConstantExpression) {
+                	AnnotationConstantExpression expression = (AnnotationConstantExpression)exp;
+                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                    return expression;
+                }
+
                 ConstantExpression expression = (ConstantExpression)exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return expression;
@@ -492,8 +535,56 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return expression;
             }
 
-            if(exp instanceof DeclarationExpression) {
-                DeclarationExpression expression = (DeclarationExpression)exp;
+            if(exp instanceof ArrayExpression) {
+                ArrayExpression expression = (ArrayExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+            if(exp instanceof BitwiseNegationExpression) {
+            	BitwiseNegationExpression expression = (BitwiseNegationExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof CastExpression) {
+                CastExpression expression = (CastExpression)exp;
+                CastExpression transformed = new CastExpression(expression.getType(), transform(expression.getExpression()));
+                transformed.setSourcePosition(exp);
+                return transformed;
+            }
+
+            if(exp instanceof EmptyExpression) {
+            	EmptyExpression expression = (EmptyExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof GStringExpression) {
+            	GStringExpression expression = (GStringExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof ListOfExpressionsExpression) {
+            	ListOfExpressionsExpression expression = (ListOfExpressionsExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof SpreadMapExpression) {
+            	SpreadMapExpression expression = (SpreadMapExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof UnaryMinusExpression) {
+            	UnaryMinusExpression expression = (UnaryMinusExpression)exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return expression;
+            }
+
+            if(exp instanceof UnaryPlusExpression) {
+            	UnaryPlusExpression expression = (UnaryPlusExpression)exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return expression;
             }
@@ -536,6 +627,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             Parameter left = new Parameter(ClassHelper.OBJECT_TYPE, "left");
             Parameter right = new Parameter(ClassHelper.OBJECT_TYPE, "right");
 
+            // Does not work for AttributeExpression
             BinaryExpression be = new BinaryExpression(new VariableExpression(left),binaryExpression.getOperation(), new VariableExpression(right));
 
             ExpressionStatement expressionStatement = new ExpressionStatement(be);
