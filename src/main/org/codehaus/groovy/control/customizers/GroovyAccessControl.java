@@ -45,7 +45,16 @@ public class GroovyAccessControl {
     private final List<String> propertiesWhiteList;
     private final List<String> propertiesBlackList;
 
-    public GroovyAccessControl(ArrayList methodWhitelist, ArrayList methodBlacklist, ArrayList methodPointerWhitelist, ArrayList methodPointerBlacklist,Map binaryWhiteList, Map binaryBlackList, ArrayList propertiesWhiteList, ArrayList propertiesBlackList) {
+    public GroovyAccessControl(
+            List<String> methodWhitelist,
+            List<String> methodBlacklist,
+            List<String> methodPointerWhitelist,
+            List<String> methodPointerBlacklist,
+            Map<String, List<List<String>>> binaryWhiteList,
+            Map<String, List<List<String>>> binaryBlackList,
+            List<String> propertiesWhiteList,
+            List<String> propertiesBlackList) {
+
         if(methodWhitelist != null) {
             this.methodsOnReceiverWhitelist = Collections.unmodifiableList(methodWhitelist);
         } else {
@@ -156,6 +165,7 @@ public class GroovyAccessControl {
         return null;
         //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
     }
+
     public String findClassForMethod(Class<?> clazz, String name, Class<?>... paramTypes) {
         Class<?> searchType = clazz;
         while (searchType != null) {
