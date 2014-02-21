@@ -37,23 +37,23 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         try {
             closure()
         } catch (SecurityException e) {
-            if(errorMessage) assertTrue("Should have throw a Security Exception with " + errorMessage + " instead of " + e.getMessage(), e.getMessage().contains(errorMessage))
+            if(errorMessage) assertTrue("Should have thrown a Security Exception with " + errorMessage + " instead of " + e.getMessage(), e.getMessage().contains(errorMessage))
             result = true
         } catch (MultipleCompilationErrorsException e) {
             result = e.errorCollector.errors.any {
                 if (it.cause?.class == SecurityException) {
-                    if(errorMessage) assertTrue("Should have throw a Security Exception with " + errorMessage + " instead of " + it.cause?.getMessage(), it.cause?.getMessage().contains(errorMessage))
+                    if(errorMessage) assertTrue("Should have thrown a Security Exception with " + errorMessage + " instead of " + it.cause?.getMessage(), it.cause?.getMessage().contains(errorMessage))
                     return true
                 }
                 return false
             }
         } catch (ExceptionInInitializerError e) {
             if (e.exception instanceof SecurityException) {
-                if(errorMessage) assertTrue("Should have throw a Security Exception with " + errorMessage + " instead of " + e.exception.getMessage(), e.exception.getMessage().contains(errorMessage))
+                if(errorMessage) assertTrue("Should have thrown a Security Exception with " + errorMessage + " instead of " + e.exception.getMessage(), e.exception.getMessage().contains(errorMessage))
                 return true
             } else {
                 println e.exception
-                errorMessage ? fail("Should have throw a Security Exception with " + errorMessage + " instead of " + e.exception.getMessage()) : fail(e.exception.getMessage().contains(errorMessage))
+                errorMessage ? fail("Should have thrown a Security Exception with " + errorMessage + " instead of " + e.exception.getMessage()) : fail(e.exception.getMessage().contains(errorMessage))
             }
         }
 
