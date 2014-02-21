@@ -1000,10 +1000,10 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.util.ArrayList.toString")
+        }, "java.lang.String.toString")
 
         // 3. defined in BL
-        def methodBlackList = ["java.util.ArrayList.toString"]
+        def methodBlackList = ["java.lang.String.toString"]
         customizer.with {
             setMethodsWhiteList(null);
             setMethodsBlackList(methodBlackList);
@@ -1011,7 +1011,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.util.ArrayList.toString")
+        }, "java.lang.String.toString")
     }
 
     void testArrayGet() {

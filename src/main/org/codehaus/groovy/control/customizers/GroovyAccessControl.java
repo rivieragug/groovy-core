@@ -17,6 +17,7 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.runtime.MethodClosure;
 
 import java.lang.reflect.Constructor;
