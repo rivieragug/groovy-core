@@ -34,6 +34,8 @@ import java.util.Map;
 
 
 public class GroovyAccessControl {
+    static final String CLASS_SEPARATOR = "#";
+
     // methods for a given receiver, syntax like MyReceiver.myMethod
     private final List<String> methodsOnReceiverWhitelist;
     private final List<String> methodsOnReceiverBlacklist;
@@ -106,8 +108,8 @@ public class GroovyAccessControl {
             if (receiver instanceof Class) {
                 if (methodName.equals("new")) {
                     String ctor = findConstructorForClass(receiver.getClass(), null);
-                    if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(((Class) receiver).getName() + "." + ctor)) {
-                        throw new SecurityException(((Class) receiver).getName() + "." + ctor + " is not allowed ...........");
+                    if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(((Class) receiver).getName() + CLASS_SEPARATOR + ctor)) {
+                        throw new SecurityException(((Class) receiver).getName() + CLASS_SEPARATOR + ctor + " is not allowed ...........");
                     }
                 } else {
                     //For static method
@@ -148,7 +150,7 @@ public class GroovyAccessControl {
     private String isCallOnObjectReceiverAllowed(Class receiver, String methodName, Object[] args, Closure closure) {
         String clazz = findClassForMethod(receiver, methodName, null);
         if (clazz != null) {
-            return clazz + "." + methodName;
+            return clazz + CLASS_SEPARATOR + methodName;
         }
         return null;
     }
@@ -194,13 +196,13 @@ public class GroovyAccessControl {
         String clazz = (toto != null) ? toto.getName() : "null";
 
         if (methodPointersOnReceiverBlacklist != null) {
-            if (methodPointersOnReceiverBlacklist.contains(clazz + "." + methodCall)) {
-                throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
+            if (methodPointersOnReceiverBlacklist.contains(clazz + CLASS_SEPARATOR + methodCall)) {
+                throw new SecurityException(clazz + CLASS_SEPARATOR + methodCall + " is not allowed ...........");
             }
         }
         if (methodPointersOnReceiverWhitelist != null) {
-            if (!methodPointersOnReceiverWhitelist.contains(clazz + "." + methodCall)) {
-                throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
+            if (!methodPointersOnReceiverWhitelist.contains(clazz + CLASS_SEPARATOR + methodCall)) {
+                throw new SecurityException(clazz + CLASS_SEPARATOR + methodCall + " is not allowed ...........");
             }
         }
 
@@ -252,11 +254,11 @@ public class GroovyAccessControl {
     public Object checkPropertyNode(Object receiver, String name, Closure closure) {
         Class toto = extractClassForReceiver(receiver);
         String clazz = (toto != null) ? toto.getName() : "null";
-        if (propertiesBlackList != null && propertiesBlackList.contains(clazz + "." + name)) {
-            throw new SecurityException(clazz + "." + name + " is not allowed ...........");
+        if (propertiesBlackList != null && propertiesBlackList.contains(clazz + CLASS_SEPARATOR + name)) {
+            throw new SecurityException(clazz + CLASS_SEPARATOR + name + " is not allowed ...........");
         }
-        if (propertiesWhiteList != null && !propertiesWhiteList.contains(clazz + "." + name)) {
-            throw new SecurityException(clazz + "." + name + " is not allowed ...........");
+        if (propertiesWhiteList != null && !propertiesWhiteList.contains(clazz + CLASS_SEPARATOR + name)) {
+            throw new SecurityException(clazz + CLASS_SEPARATOR + name + " is not allowed ...........");
         }
         return closure.call(receiver, name);
     }

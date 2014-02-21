@@ -173,7 +173,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             }
             List<MethodNode> methods = filterMethods(classNode);
             for(MethodNode methodNode : methods) {
-                array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + "." + methodNode.getName()));
+                array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + GroovyAccessControl.CLASS_SEPARATOR + methodNode.getName()));
             }
             // Need to add all the method of other class
             // even inner class ? or just className.*
@@ -199,7 +199,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             }
             List<MethodNode> methods = filterMethods(classNode);
             for(MethodNode methodNode : methods) {
-                array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + "." + methodNode.getName()));
+                array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + GroovyAccessControl.CLASS_SEPARATOR + methodNode.getName()));
             }
             // Need to add all the method of other class
             // even inner class ? or just className.*
