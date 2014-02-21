@@ -922,26 +922,24 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point#new","java.lang.Object"]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setMethodsWhiteList(methodWhiteList);
+            propertiesWhiteList = []
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point#setX")
+        }, "java.awt.Point#@x")
 
         // 3. defined in BL
-        def methodBlackList = ["java.awt.Point#setX"]
         customizer.with {
-            setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            propertiesWhiteList = null
+            propertiesBlackList = ['java.awt.Point#@x']
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point#setX")
+        }, "java.awt.Point#@x")
     }
 
     void testSpreadOperator() {

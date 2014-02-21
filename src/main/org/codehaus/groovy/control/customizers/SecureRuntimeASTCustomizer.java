@@ -441,13 +441,6 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             }
 
             if(exp instanceof PropertyExpression) {
-            	// AttributeExpression
-                if(exp instanceof AttributeExpression) {
-                    AttributeExpression expression = (AttributeExpression)exp;
-                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                    return super.transform(expression);
-                }
-
                 return makeSafeProperty((PropertyExpression) exp);
             }
 
@@ -551,6 +544,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
         }
 
         private Expression makeSafeProperty(final PropertyExpression pexp) {
+            boolean attribute = pexp instanceof AttributeExpression;
             if (pexp.isSpreadSafe()) {
                 // foo.*x --> foo.collect { it.x }
                 // foo*.bar() --> foo.collect { it.bar() }
@@ -577,11 +571,11 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                     ArgumentListExpression.EMPTY_ARGUMENTS
             );
 
-            ArgumentListExpression groovyAccessControlArguments = new ArgumentListExpression(
-                    transform(pexp.getObjectExpression()),
+            List<Expression> expressions = Arrays.asList(transform(pexp.getObjectExpression()),
                     transform(pexp.getProperty()),
-                    closureExpression
-            );
+                    new ConstantExpression(attribute, true),
+                    closureExpression);
+            ArgumentListExpression groovyAccessControlArguments = new ArgumentListExpression(expressions);
 
             MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", GAC_CLASS), "checkPropertyNode", groovyAccessControlArguments);
             methodCallExpression.setSourcePosition(pexp);

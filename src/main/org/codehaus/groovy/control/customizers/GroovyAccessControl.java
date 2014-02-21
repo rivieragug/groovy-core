@@ -251,14 +251,15 @@ public class GroovyAccessControl {
         return closure.call(left, right);
     }
 
-    public Object checkPropertyNode(Object receiver, String name, Closure closure) {
+    public Object checkPropertyNode(Object receiver, String name, boolean attribute, Closure closure) {
         Class toto = extractClassForReceiver(receiver);
         String clazz = (toto != null) ? toto.getName() : "null";
-        if (propertiesBlackList != null && propertiesBlackList.contains(clazz + CLASS_SEPARATOR + name)) {
-            throw new SecurityException(clazz + CLASS_SEPARATOR + name + " is not allowed ...........");
+        String id = clazz + CLASS_SEPARATOR + (attribute ? "@" : "") + name;
+        if (propertiesBlackList != null && propertiesBlackList.contains(id)) {
+            throw new SecurityException(id + " is not allowed ...........");
         }
-        if (propertiesWhiteList != null && !propertiesWhiteList.contains(clazz + CLASS_SEPARATOR + name)) {
-            throw new SecurityException(clazz + CLASS_SEPARATOR + name + " is not allowed ...........");
+        if (propertiesWhiteList != null && !propertiesWhiteList.contains(id)) {
+            throw new SecurityException(id + " is not allowed ...........");
         }
         return closure.call(receiver, name);
     }
