@@ -301,19 +301,13 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
             if(exp instanceof BinaryExpression) {
                 BinaryExpression expression = (BinaryExpression)exp;
-                //CompareIdentityExpression
-                //CompareToNullExpression'
-                //DeclarationExpression
-                
                 expression.setRightExpression(transform(expression.getRightExpression()));
 
                 if(!(expression instanceof DeclarationExpression)){
-                	boolean setProperty = expression.getLeftExpression() instanceof AttributeExpression;
                     expression.setLeftExpression(transform(expression.getLeftExpression()));
                     ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(expression);
                     MethodCallExpression methodCallExpression = new MethodCallExpression(
-                            new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)),
-                            setProperty ? "checkSetPropertyExpression" : "checkBinaryExpression", argumentListExpression);
+                            new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkBinaryExpression", argumentListExpression);
                     methodCallExpression.setSourcePosition(exp);
                     return methodCallExpression;
                 }
@@ -439,13 +433,6 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             }
 
             if(exp instanceof PropertyExpression) {
-            	// AttributeExpression
-                if(exp instanceof AttributeExpression) {
-                    AttributeExpression expression = (AttributeExpression)exp;
-                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                    return super.transform(expression);
-                }
-
                 return makeSafeProperty((PropertyExpression) exp);
             }
 

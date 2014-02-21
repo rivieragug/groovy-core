@@ -34,7 +34,7 @@ import java.lang.reflect.Method;
  */
 
 
-public class GroovyAccessControl {
+public final class GroovyAccessControl {
     // methods for a given receiver, syntax like MyReceiver.myMethod
     private final List<String> methodsOnReceiverWhitelist;
     private final List<String> methodsOnReceiverBlacklist;
@@ -96,7 +96,8 @@ public class GroovyAccessControl {
 
 
     }
-    public Object checkCall(Object receiver, String methodName, Object[] args, Closure closure) {
+
+    public final Object checkCall(final Object receiver, final String methodName, final Object[] args, final Closure closure) {
         if(receiver != null) {
             if (receiver instanceof Class) {
                 if (methodName.equals("new")) {
@@ -140,7 +141,7 @@ public class GroovyAccessControl {
         return closure.call(receiver, methodName, args);
     }
 
-    private String isCallOnObjectReceiverAllowed(Class receiver, String methodName, Object[] args, Closure closure) {
+    private String isCallOnObjectReceiverAllowed(final Class receiver, final String methodName, final Object[] args, final Closure closure) {
         String clazz = findClassForMethod(receiver, methodName, null);
         if (clazz != null) {
             return clazz + "." + methodName;
@@ -156,7 +157,8 @@ public class GroovyAccessControl {
         return null;
         //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
     }
-    public String findClassForMethod(Class<?> clazz, String name, Class<?>... paramTypes) {
+
+    private String findClassForMethod(final Class<?> clazz, final String name, final Class<?>... paramTypes) {
         Class<?> searchType = clazz;
         while (searchType != null) {
             Method[] methods = (searchType.isInterface() ? searchType.getMethods() : searchType.getDeclaredMethods());
@@ -183,7 +185,7 @@ public class GroovyAccessControl {
         return null;
     }
 
-    public Object checkMethodPointerDeclaration(Object receiver, String methodCall) {
+    public final Object checkMethodPointerDeclaration(final Object receiver, final String methodCall) {
         Class toto = extractClassForReceiver(receiver);
         String clazz = (toto != null) ? toto.getName() : "null";
 
@@ -201,7 +203,7 @@ public class GroovyAccessControl {
         return new MethodClosure(receiver ,methodCall);
     }
 
-    public Object checkBinaryExpression(String token, Object left, Object right, Closure closure){
+    public final Object checkBinaryExpression(final String token, final Object left, final Object right, final Closure closure){
         String clazzLeft = left== null ? "null" : left.getClass().getName();
         String clazzRight = right== null ? "null" : right.getClass().getName();
         if(binaryOperatorBlackList != null) {
@@ -238,13 +240,9 @@ public class GroovyAccessControl {
         return closure.call(left, right);
     }
 
-    public Object checkSetPropertyExpression(String token, Object left, Object right, Closure closure){
-    	//methodsOnReceiverBlacklist.contains(left.getClass() + ".set");
-    	return closure.call(left, right);
-    }
-    public Object checkPropertyNode(Object receiver, String name, Closure closure) {
-        Class toto = extractClassForReceiver(receiver);
-        String clazz = (toto != null) ? toto.getName() : "null";
+    public final Object checkPropertyNode(final Object receiver, final String name, final Closure closure) {
+        Class receiverClass = extractClassForReceiver(receiver);
+        String clazz = (receiverClass != null) ? receiverClass.getName() : "null";
         if (propertiesBlackList != null) {
             if(propertiesBlackList.contains(clazz + "." + name)) {
                 throw new SecurityException(clazz + "." + name + " is not allowed ...........");

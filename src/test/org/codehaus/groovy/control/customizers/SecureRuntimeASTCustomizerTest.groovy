@@ -255,7 +255,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "Script2.b")
     }
 
-    //TODO
     void testClosureDefinedInScript() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -434,7 +433,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
         }, "java.util.ArrayList.clear")
     }
-    //TODO
+
     void testConstructorWithClassForName() {
         def shell = new GroovyShell(configuration)
         String script = """
@@ -454,7 +453,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
             shell.evaluate(script)
         }, "java.lang.Class")
     }
-    //TODO
+
     void testConstructorWithClassForNameComingFromAnotherClass() {
         def shell = new GroovyShell(configuration)
         String script = """
@@ -495,7 +494,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.new")
     }
 
-    //TODO Failing test
     void testConstructorWithNewify() {
         def shell = new GroovyShell(configuration)
         String script = """
@@ -520,7 +518,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList.new")
     }
 
-    //TODO Failing test
     void testConstructorWithNewifyWithCast() {
         def shell = new GroovyShell(configuration)
         String script = """
@@ -875,7 +872,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
     }
 
 
-    // TODO point.x=3 (property set)
     void testPropertySet() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -892,25 +888,25 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object"]
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
+            setPropertiesWhiteList([]);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.setX")
+        }, "java.awt.Point.x")
 
         // 3. defined in BL
-        def methodBlackList = ["java.awt.Point.setX"]
         customizer.with {
             setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            setPropertiesWhiteList(null);
+            setPropertiesBlackList(["java.awt.Point.x"]);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.setX")
+        }, "java.awt.Point.x")
     }
 
-    // TODO point.@x=4 (Direct attribute set)
     void testAttributeSet() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -918,7 +914,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
            import java.awt.Point
            Point point  =  new Point(1, 2)
            point.@x = 3
-           println point.x
         """
         shell.evaluate(script)
         // no error means success
@@ -928,25 +923,25 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
+            setPropertiesWhiteList([]);
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.setX")
+        }, "java.awt.Point.x")
 
         // 3. defined in BL
-        def methodBlackList = ["java.awt.Point.setX"]
         customizer.with {
             setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            setPropertiesWhiteList(null)
+            setPropertiesBlackList(["java.awt.Point.x"])
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.setX")
+        }, "java.awt.Point.x")
     }
 
-    // TODO points*.x=3 (spread operator)
     void testSpreadOperator() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -963,22 +958,23 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
             setMethodsWhiteList(methodWhiteList);
+            setPropertiesWhiteList([])
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.set")
+        }, "java.awt.Point.x")
 
         // 3. defined in BL
-        def methodBlackList = ["java.awt.Point.set"]
         customizer.with {
             setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            setPropertiesWhiteList(null)
+            setPropertiesBlackList(["java.awt.Point.x"])
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.set")
+        }, "java.awt.Point.x")
     }
 
     void testSpreadWithMethodCallOperator() {
@@ -1063,7 +1059,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "[I [ java.lang.Integer is not allowed")
     }
 
-    // TODO Array set
     void testArraySet() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
@@ -1308,7 +1303,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.Class.forName")
     }
 
-    // TODO Nested class
     void testNestedClass() {
 
         // 1. no restriction
@@ -1344,7 +1338,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.set")
+        }, "TODO")
     }
 
     void testCompoundAssignmentOnArray() {
@@ -1359,7 +1353,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "Token (\"<<=\" at 2:47:  \"<<=\" ) is not allowed")
     }
 
-    // TODO
     void testComparisonPrimitives() {
 
         // 1. no restriction
@@ -1391,7 +1384,6 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.Integer == java.lang.Integer")
     }
 
-    // TODO
     void testComparisonObject() {
 
         // 1. no restriction
