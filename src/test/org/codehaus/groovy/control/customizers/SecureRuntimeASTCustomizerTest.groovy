@@ -889,25 +889,23 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         configuration.addCompilationCustomizers(customizer)
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object"]
         customizer.with {
-            setMethodsWhiteList(methodWhiteList);
+            propertiesWhiteList = []
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.setX")
+        }, "java.awt.Point.x")
 
         // 3. defined in BL
-        def methodBlackList = ["java.awt.Point.setX"]
         customizer.with {
-            setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            propertiesWhiteList = null
+            propertiesBlackList = ['java.awt.Point.x']
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.setX")
+        }, "java.awt.Point.x")
     }
 
     // TODO point.@x=4 (Direct attribute set)
@@ -959,26 +957,24 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         // no error means success
 
         // 2. not defined in WL
-        def methodWhiteList = ["java.awt.Point","java.awt.Point.new","java.lang.Object" ]
         configuration.addCompilationCustomizers(customizer)
         customizer.with {
-            setMethodsWhiteList(methodWhiteList);
+            propertiesWhiteList = []
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.set")
+        }, "java.awt.Point.x")
 
         // 3. defined in BL
-        def methodBlackList = ["java.awt.Point.set"]
         customizer.with {
-            setMethodsWhiteList(null);
-            setMethodsBlackList(methodBlackList);
+            propertiesWhiteList = null
+            propertiesBlackList = ['java.awt.Point.x']
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point.set")
+        }, "java.awt.Point.x")
     }
 
     void testSpreadWithMethodCallOperator() {

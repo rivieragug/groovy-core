@@ -17,20 +17,19 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.runtime.MethodClosure;
 
 import java.lang.reflect.Constructor;
-import java.util.*;
 import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
- * TODO Add JavaDocs
- * TODO Revisit location in the correct package
+ * TODO Add JavaDocs TODO Revisit location in the correct package
  *
  * @author Corinne Krych
  * @author Fabrice Matrat
- *
  */
 
 
@@ -38,8 +37,8 @@ public class GroovyAccessControl {
     // methods for a given receiver, syntax like MyReceiver.myMethod
     private final List<String> methodsOnReceiverWhitelist;
     private final List<String> methodsOnReceiverBlacklist;
-    private final Map<String,List<List<String>>> binaryOperatorWhiteList;
-    private final Map<String,List<List<String>>> binaryOperatorBlackList;
+    private final Map<String, List<List<String>>> binaryOperatorWhiteList;
+    private final Map<String, List<List<String>>> binaryOperatorBlackList;
     private final List<String> methodPointersOnReceiverWhitelist;
     private final List<String> methodPointersOnReceiverBlacklist;
     private final List<String> propertiesWhiteList;
@@ -55,58 +54,55 @@ public class GroovyAccessControl {
             List<String> propertiesWhiteList,
             List<String> propertiesBlackList) {
 
-        if(methodWhitelist != null) {
+        if (methodWhitelist != null) {
             this.methodsOnReceiverWhitelist = Collections.unmodifiableList(methodWhitelist);
         } else {
             this.methodsOnReceiverWhitelist = null;
         }
-        if(methodBlacklist != null) {
+        if (methodBlacklist != null) {
             this.methodsOnReceiverBlacklist = Collections.unmodifiableList(methodBlacklist);
         } else {
             this.methodsOnReceiverBlacklist = null;
         }
 
 
-        if(methodPointerWhitelist != null) {
+        if (methodPointerWhitelist != null) {
             this.methodPointersOnReceiverWhitelist = Collections.unmodifiableList(methodPointerWhitelist);
         } else {
             this.methodPointersOnReceiverWhitelist = null;
         }
-        if(methodPointerBlacklist != null) {
+        if (methodPointerBlacklist != null) {
             this.methodPointersOnReceiverBlacklist = Collections.unmodifiableList(methodPointerBlacklist);
         } else {
             this.methodPointersOnReceiverBlacklist = null;
         }
-        if(binaryWhiteList != null){
+        if (binaryWhiteList != null) {
             this.binaryOperatorWhiteList = Collections.unmodifiableMap(binaryWhiteList);
-        }
-        else {
+        } else {
             this.binaryOperatorWhiteList = null;
         }
-        if(binaryBlackList != null){
+        if (binaryBlackList != null) {
             this.binaryOperatorBlackList = Collections.unmodifiableMap(binaryBlackList);
-        }
-        else {
+        } else {
             this.binaryOperatorBlackList = null;
         }
 
-        if(propertiesWhiteList != null){
+        if (propertiesWhiteList != null) {
             this.propertiesWhiteList = Collections.unmodifiableList(propertiesWhiteList);
-        }
-        else {
+        } else {
             this.propertiesWhiteList = null;
         }
-        if(propertiesBlackList != null){
+        if (propertiesBlackList != null) {
             this.propertiesBlackList = Collections.unmodifiableList(propertiesBlackList);
-        }
-        else {
+        } else {
             this.propertiesBlackList = null;
         }
 
 
     }
+
     public Object checkCall(Object receiver, String methodName, Object[] args, Closure closure) {
-        if(receiver != null) {
+        if (receiver != null) {
             if (receiver instanceof Class) {
                 if (methodName.equals("new")) {
                     String ctor = findConstructorForClass(receiver.getClass(), null);
@@ -116,13 +112,13 @@ public class GroovyAccessControl {
                 } else {
                     //For static method
                     String methodFromReceiver = isCallOnObjectReceiverAllowed(receiver.getClass(), methodName, args, closure);
-                    if(methodFromReceiver != null) {
+                    if (methodFromReceiver != null) {
                         if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(methodFromReceiver)) {
                             throw new SecurityException(methodFromReceiver + " is not allowed ...........");
                         }
                     }
-                    String methodFromClass = isCallOnObjectReceiverAllowed((Class)receiver, methodName, args, closure);
-                    if(methodFromClass != null) {
+                    String methodFromClass = isCallOnObjectReceiverAllowed((Class) receiver, methodName, args, closure);
+                    if (methodFromClass != null) {
                         if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(methodFromClass)) {
                             throw new SecurityException(methodFromClass + " is not allowed ...........");
                         }
@@ -130,13 +126,13 @@ public class GroovyAccessControl {
                             throw new SecurityException(methodFromClass + " is not allowed ...........");
                         }
                     }
-                    if((methodFromReceiver != null && methodFromClass == null) && methodsOnReceiverWhitelist != null) {
+                    if ((methodFromReceiver != null && methodFromClass == null) && methodsOnReceiverWhitelist != null) {
                         throw new SecurityException(methodFromReceiver + " is not allowed ...........");
                     }
                 }
             } else {
                 String method = isCallOnObjectReceiverAllowed(receiver.getClass(), methodName, args, closure);
-                if(method != null) {
+                if (method != null) {
                     if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(method)) {
                         throw new SecurityException(method + " is not allowed ...........");
                     }
@@ -159,7 +155,7 @@ public class GroovyAccessControl {
 
     private String findConstructorForClass(Class<?> clazz, Class<?>... paramTypes) {
         Constructor<?>[] constructors = clazz.getDeclaredConstructors();
-        if(constructors.length > 0) {
+        if (constructors.length > 0) {
             return "new";
         }
         return null;
@@ -172,7 +168,7 @@ public class GroovyAccessControl {
             Method[] methods = (searchType.isInterface() ? searchType.getMethods() : searchType.getDeclaredMethods());
             for (Method method : methods) {
                 if (name.equals(method.getName())) {
-                        //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
+                    //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
                     return searchType.getName();
                 }
             }
@@ -198,49 +194,49 @@ public class GroovyAccessControl {
         String clazz = (toto != null) ? toto.getName() : "null";
 
         if (methodPointersOnReceiverBlacklist != null) {
-            if(methodPointersOnReceiverBlacklist.contains(clazz + "." + methodCall)) {
+            if (methodPointersOnReceiverBlacklist.contains(clazz + "." + methodCall)) {
                 throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
             }
         }
         if (methodPointersOnReceiverWhitelist != null) {
-            if(!methodPointersOnReceiverWhitelist.contains(clazz + "." + methodCall)) {
+            if (!methodPointersOnReceiverWhitelist.contains(clazz + "." + methodCall)) {
                 throw new SecurityException(clazz + "." + methodCall + " is not allowed ...........");
             }
         }
 
-        return new MethodClosure(receiver ,methodCall);
+        return new MethodClosure(receiver, methodCall);
     }
 
-    public Object checkBinaryExpression(String token, Object left, Object right, Closure closure){
-        String clazzLeft = left== null ? "null" : left.getClass().getName();
-        String clazzRight = right== null ? "null" : right.getClass().getName();
-        if(binaryOperatorBlackList != null) {
-            if(binaryOperatorBlackList.containsKey(token)){
+    public Object checkBinaryExpression(String token, Object left, Object right, Closure closure) {
+        String clazzLeft = left == null ? "null" : left.getClass().getName();
+        String clazzRight = right == null ? "null" : right.getClass().getName();
+        if (binaryOperatorBlackList != null) {
+            if (binaryOperatorBlackList.containsKey(token)) {
                 List<List<String>> list = binaryOperatorBlackList.get(token);
-                for(List<String> tuple : list){
+                for (List<String> tuple : list) {
                     //TODO add uni test for list size==2
-                    if(tuple.get(0).equals(clazzLeft) && tuple.get(1).equals(clazzRight)){
-                        throw new SecurityException(clazzLeft + " " + token + " "  + clazzRight+ " is not allowed ..........." );
+                    if (tuple.get(0).equals(clazzLeft) && tuple.get(1).equals(clazzRight)) {
+                        throw new SecurityException(clazzLeft + " " + token + " " + clazzRight + " is not allowed ...........");
                     }
                 }
             }
         }
 
-        if(binaryOperatorWhiteList != null) {
-            boolean found =  false;
-            if(binaryOperatorWhiteList.containsKey(token)){
+        if (binaryOperatorWhiteList != null) {
+            boolean found = false;
+            if (binaryOperatorWhiteList.containsKey(token)) {
                 List<List<String>> list = binaryOperatorWhiteList.get(token);
 
-                for(List<String> tuple : list){
+                for (List<String> tuple : list) {
                     //TODO add uni test for list size==2
-                    if(tuple.get(0).equals(clazzLeft) && tuple.get(1).equals(clazzRight)){
+                    if (tuple.get(0).equals(clazzLeft) && tuple.get(1).equals(clazzRight)) {
                         found = true;
                         break;
                     }
                 }
             }
-            if (! found) {
-                throw new SecurityException(clazzLeft + " " + token + " "  + clazzRight+ " is not allowed ..........." );
+            if (!found) {
+                throw new SecurityException(clazzLeft + " " + token + " " + clazzRight + " is not allowed ...........");
             }
         }
 
@@ -248,22 +244,19 @@ public class GroovyAccessControl {
         return closure.call(left, right);
     }
 
-    public Object checkSetPropertyExpression(String token, Object left, Object right, Closure closure){
-    	//methodsOnReceiverBlacklist.contains(left.getClass() + ".set");
-    	return closure.call(left, right);
+    public Object checkSetPropertyExpression(String token, Object left, Object right, Closure closure) {
+        //methodsOnReceiverBlacklist.contains(left.getClass() + ".set");
+        return closure.call(left, right);
     }
+
     public Object checkPropertyNode(Object receiver, String name, Closure closure) {
         Class toto = extractClassForReceiver(receiver);
         String clazz = (toto != null) ? toto.getName() : "null";
-        if (propertiesBlackList != null) {
-            if(propertiesBlackList.contains(clazz + "." + name)) {
-                throw new SecurityException(clazz + "." + name + " is not allowed ...........");
-            }
+        if (propertiesBlackList != null && propertiesBlackList.contains(clazz + "." + name)) {
+            throw new SecurityException(clazz + "." + name + " is not allowed ...........");
         }
-        if (propertiesWhiteList != null) {
-            if(!propertiesWhiteList.contains(clazz + "." + name)) {
-                throw new SecurityException(clazz + "." + name + " is not allowed ...........");
-            }
+        if (propertiesWhiteList != null && !propertiesWhiteList.contains(clazz + "." + name)) {
+            throw new SecurityException(clazz + "." + name + " is not allowed ...........");
         }
         return closure.call(receiver, name);
     }
