@@ -312,9 +312,10 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                     expression.setLeftExpression(transform(expression.getLeftExpression()));
                     ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(expression);
                     MethodCallExpression methodCallExpression = new MethodCallExpression(
-                            new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)),
+                            new VariableExpression("groovyAccessControl", GAC_CLASS),
                             setProperty ? "checkSetPropertyExpression" : "checkBinaryExpression", argumentListExpression);
                     methodCallExpression.setSourcePosition(exp);
+                    methodCallExpression.setImplicitThis(false);
                     return methodCallExpression;
                 }
                 return expression;
@@ -330,6 +331,7 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
 
                 MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", GAC_CLASS), "checkCall", newMethodCallArguments);
                 methodCallExpression.setSourcePosition(exp);
+                methodCallExpression.setImplicitThis(false);
                 return methodCallExpression;
             }
 
@@ -462,8 +464,12 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                                 transform(expression.getExpression()),
                                 expression.getMethodName()
                         );
-                MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkMethodPointerDeclaration", newMethodCallArguments);
+                MethodCallExpression methodCallExpression = new MethodCallExpression(
+                        new VariableExpression("groovyAccessControl", GAC_CLASS),
+                        "checkMethodPointerDeclaration",
+                        newMethodCallArguments);
                 methodCallExpression.setSourcePosition(exp);
+                methodCallExpression.setImplicitThis(false);
                 return methodCallExpression;
             }
 
