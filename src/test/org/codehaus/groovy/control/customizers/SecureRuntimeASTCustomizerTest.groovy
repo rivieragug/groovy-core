@@ -1073,6 +1073,30 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.lang.Class#forName")
     }
 
+    void testClassDefinedInScript() {
+        // 1. no restriction
+        def shell = new GroovyShell(configuration)
+        String script = """
+            class foo {
+              def m() {
+              }
+            }
+            new foo().m()
+        """
+        shell.evaluate(script)
+        // no error means success
+
+        // 2. not defined in WL
+        configuration.addCompilationCustomizers(customizer)
+        customizer.with {
+            methodsWhiteList = []
+        }
+
+        shell.evaluate(script);
+        // no error means success
+        // Should have added foo#m to whitelist
+    }
+
     void testStaticInitializationBlock() {
         // 1. no restriction
         def shell = new GroovyShell(configuration)
