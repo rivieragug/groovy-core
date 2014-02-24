@@ -191,7 +191,6 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
     }
 
     private FieldNode createAccessControlField(final ClassNode classNode) {
-        //      if (something) {  // Want to add only once the GroovyAccessControl but is it the right place
         ArgumentListExpression expression = new ArgumentListExpression();
         if (getMethodsWhiteList() != null) {
             ListExpression array = new ListExpression();
@@ -302,6 +301,8 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
             expression.addExpression(new ConstantExpression(null));
         }
 
+        //VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
+        //scopeVisitor.visitClass(classNode);
         return classNode.addFieldFirst("groovyAccessControl", ACC_SYNTHETIC | ACC_PROTECTED | ACC_FINAL | ACC_STATIC, GAC_CLASS, new ConstructorCallExpression(GAC_CLASS, expression));
     }
 

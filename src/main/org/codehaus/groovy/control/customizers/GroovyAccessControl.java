@@ -20,6 +20,7 @@ import groovy.lang.Closure;
 import org.codehaus.groovy.runtime.MethodClosure;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
@@ -104,108 +105,12 @@ public class GroovyAccessControl {
     }
 
     public Object checkCall(Object receiver, String methodName, Object[] args, Closure closure) {
-        if(receiver != null) {
-            if (receiver instanceof Class) {
-                if (methodName.equals("new")) {
-                    String ctor = findConstructorForClass(receiver.getClass(), null);
-                    if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(((Class) receiver).getName() + CLASS_SEPARATOR + ctor)) {
-                        throw new SecurityException(((Class) receiver).getName() + CLASS_SEPARATOR + ctor + " is not allowed ...........");
-                    }
-                } else {
-                    //For static method
-                    String methodFromReceiver = isCallOnObjectReceiverAllowed(receiver.getClass(), methodName, args, closure);
-                    if (methodFromReceiver != null) {
-                        if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(methodFromReceiver)) {
-                            throw new SecurityException(methodFromReceiver + " is not allowed ...........");
-                        }
-                    }
-                    String methodFromClass = isCallOnObjectReceiverAllowed((Class) receiver, methodName, args, closure);
-                    if (methodFromClass != null) {
-                        if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(methodFromClass)) {
-                            throw new SecurityException(methodFromClass + " is not allowed ...........");
-                        }
-                        if (methodsOnReceiverWhitelist != null && !methodsOnReceiverWhitelist.contains(methodFromClass)) {
-                            throw new SecurityException(methodFromClass + " is not allowed ...........");
-                        }
-                    }
-                    if ((methodFromReceiver != null && methodFromClass == null) && methodsOnReceiverWhitelist != null) {
-                        throw new SecurityException(methodFromReceiver + " is not allowed ...........");
-                    }
-                }
-            } else {
-                String method = isCallOnObjectReceiverAllowed(receiver.getClass(), methodName, args, closure);
-                if (method != null) {
-                    if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(method)) {
-                        throw new SecurityException(method + " is not allowed ...........");
-                    }
-                    if (methodsOnReceiverWhitelist != null && !methodsOnReceiverWhitelist.contains(method)) {
-                        throw new SecurityException(method + " is not allowed ...........");
-                    }
-                }
-            }
-        }
+        checkCallOnReceiver(receiver, methodName, args, methodsOnReceiverBlacklist, methodsOnReceiverWhitelist);
         return closure.call(receiver, methodName, args);
     }
 
-    private String isCallOnObjectReceiverAllowed(final Class receiver, final String methodName, final Object[] args, final Closure closure) {
-        String clazz = findClassForMethod(receiver, methodName, null);
-        if (clazz != null) {
-            return clazz + CLASS_SEPARATOR + methodName;
-        }
-        return null;
-    }
-
-    private String findConstructorForClass(Class<?> clazz, Class<?>... paramTypes) {
-        Constructor<?>[] constructors = clazz.getDeclaredConstructors();
-        if (constructors.length > 0) {
-            return "new";
-        }
-        return null;
-        //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
-    }
-
-    private String findClassForMethod(final Class<?> clazz, final String name, final Class<?>... paramTypes) {
-        Class<?> searchType = clazz;
-        while (searchType != null) {
-            Method[] methods = (searchType.isInterface() ? searchType.getMethods() : searchType.getDeclaredMethods());
-            for (Method method : methods) {
-                if (name.equals(method.getName())) {
-                    //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
-                    return searchType.getName();
-                }
-            }
-            searchType = searchType.getSuperclass();
-        }
-        return null;
-    }
-
-
-    private Class extractClassForReceiver(Object receiver) {
-        if (receiver != null) {
-            if (receiver instanceof Class) {
-                return ((Class) receiver);
-            } else {
-                return receiver.getClass();
-            }
-        }
-        return null;
-    }
-
     public Object checkMethodPointerDeclaration(Object receiver, String methodCall) {
-        Class toto = extractClassForReceiver(receiver);
-        String clazz = (toto != null) ? toto.getName() : "null";
-
-        if (methodPointersOnReceiverBlacklist != null) {
-            if (methodPointersOnReceiverBlacklist.contains(clazz + CLASS_SEPARATOR + methodCall)) {
-                throw new SecurityException(clazz + CLASS_SEPARATOR + methodCall + " is not allowed ...........");
-            }
-        }
-        if (methodPointersOnReceiverWhitelist != null) {
-            if (!methodPointersOnReceiverWhitelist.contains(clazz + CLASS_SEPARATOR + methodCall)) {
-                throw new SecurityException(clazz + CLASS_SEPARATOR + methodCall + " is not allowed ...........");
-            }
-        }
-
+        checkCallOnReceiver(receiver, methodCall, null, methodPointersOnReceiverBlacklist, methodPointersOnReceiverWhitelist);
         return new MethodClosure(receiver, methodCall);
     }
 
@@ -247,9 +152,12 @@ public class GroovyAccessControl {
     }
 
     public Object checkPropertyNode(Object receiver, String name, boolean attribute, Closure closure) {
-        Class toto = extractClassForReceiver(receiver);
-        String clazz = (toto != null) ? toto.getName() : "null";
+        String clazz = findClassForProperty(receiver.getClass(), name);
+        if (clazz == null ) {
+            clazz = findClassForMethod(receiver.getClass(), "get" +  name.substring(0, 1).toUpperCase() + name.substring(1));
+        }
         String id = clazz + CLASS_SEPARATOR + (attribute ? "@" : "") + name;
+
         if (propertiesBlackList != null && propertiesBlackList.contains(id)) {
             throw new SecurityException(id + " is not allowed ...........");
         }
@@ -259,4 +167,93 @@ public class GroovyAccessControl {
         return closure.call(receiver, name);
     }
 
+
+    private void checkCallOnReceiver(Object receiver, String methodName, Object[] args, List blacklist, List whitelist) {
+        if(receiver != null) {
+            if (receiver instanceof Class) {
+                if (methodName.equals("new")) {
+                    String ctor = findConstructorForClass(receiver.getClass(), null);
+                    if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(((Class) receiver).getName() + CLASS_SEPARATOR + ctor)) {
+                        throw new SecurityException(((Class) receiver).getName() + CLASS_SEPARATOR + ctor + " is not allowed ...........");
+                    }
+                } else {
+                    //For static method
+                    String methodFromReceiver = findMethodPatternForReceiver(receiver.getClass(), methodName, args);
+                    if (methodFromReceiver != null) {
+                        if (blacklist != null && blacklist.contains(methodFromReceiver)) {
+                            throw new SecurityException(methodFromReceiver + " is not allowed ...........");
+                        }
+                    }
+                    String methodFromClass = findMethodPatternForReceiver((Class) receiver, methodName, args);
+                    if (methodFromClass != null) {
+                        if (blacklist != null && blacklist.contains(methodFromClass)) {
+                            throw new SecurityException(methodFromClass + " is not allowed ...........");
+                        }
+                        if (whitelist != null && !whitelist.contains(methodFromClass)) {
+                            throw new SecurityException(methodFromClass + " is not allowed ...........");
+                        }
+                    }
+                    if ((methodFromReceiver != null && methodFromClass == null) && whitelist != null) {
+                        throw new SecurityException(methodFromReceiver + " is not allowed ...........");
+                    }
+                }
+            } else {
+                String method = findMethodPatternForReceiver(receiver.getClass(), methodName, args);
+                if (method != null) {
+                    if (blacklist != null && blacklist.contains(method)) {
+                        throw new SecurityException(method + " is not allowed ...........");
+                    }
+                    if (whitelist != null && !whitelist.contains(method)) {
+                        throw new SecurityException(method + " is not allowed ...........");
+                    }
+                }
+            }
+        }
+    }
+
+    private String findMethodPatternForReceiver(final Class receiver, final String methodName, final Object[] args) {
+        String clazz = findClassForMethod(receiver, methodName, null);
+        if (clazz != null) {
+            return clazz + CLASS_SEPARATOR + methodName;
+        }
+        return null;
+    }
+
+    private String findConstructorForClass(Class<?> clazz, Class<?>... paramTypes) {
+        Constructor<?>[] constructors = clazz.getDeclaredConstructors();
+        if (constructors.length > 0) {
+            return "new";
+        }
+        return null;
+        //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
+    }
+
+    private String findClassForMethod(final Class<?> clazz, final String name, final Class<?>... paramTypes) {
+        Class<?> searchType = clazz;
+        while (searchType != null) {
+            Method[] methods = (searchType.isInterface() ? searchType.getMethods() : searchType.getDeclaredMethods());
+            for (Method method : methods) {
+                if (name.equals(method.getName())) {
+                    //&& (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
+                    return searchType.getName();
+                }
+            }
+            searchType = searchType.getSuperclass();
+        }
+        return null;
+    }
+
+    private String findClassForProperty(final Class<?> clazz, final String property) {
+        Class<?> searchType = clazz;
+        while (searchType != null) {
+            Field[] fields = searchType.getFields();
+            for (Field field : fields) {
+                if (property.equals(field.getName())) {
+                    return searchType.getName();
+                }
+            }
+            searchType = searchType.getSuperclass();
+        }
+        return null;
+    }
 }
