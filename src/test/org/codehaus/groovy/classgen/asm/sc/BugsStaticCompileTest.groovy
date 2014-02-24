@@ -311,7 +311,7 @@ class BugsStaticCompileTest extends BugsSTCTest {
         assertScript '''
                 Closure c = { Integer x, Integer y -> x <=> y }
                 def list = [ 3,1,5,2,4 ]
-                assert list.sort(c) == [1,2,3,4,5]
+                assert ((Collection)list).sort(c) == [1,2,3,4,5]
             '''
     }
 
@@ -1144,6 +1144,26 @@ assert it.next() == 1G
             def key = set[0]
             assert key=='a'
         '''
+    }
+
+    // GROOVY-6552
+    void testShouldNotThrowClassCastException() {
+        assertScript '''import java.util.concurrent.Callable
+
+    String text(Class clazz) {
+        new Callable<String>() {
+            String call() throws Exception {
+                new Callable<String>() {
+                    String call() throws Exception {
+                        clazz.getName()
+                    }
+                }.call()
+            }
+        }.call()
+    }
+
+    assert text(String) == 'java.lang.String'
+    '''
     }
 }
 
