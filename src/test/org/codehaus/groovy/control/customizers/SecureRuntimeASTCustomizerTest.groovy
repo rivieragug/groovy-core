@@ -1468,7 +1468,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point#length")
+        }, "java.awt.Point#x")
     }
 
     void testClosureDelegationPropertyOwner() {
@@ -1494,7 +1494,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "java.awt.Point#length")
+        }, "java.awt.Point#x")
     }
 
     void testLogicalNotEquals() {
