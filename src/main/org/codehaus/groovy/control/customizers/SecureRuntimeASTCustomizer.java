@@ -249,9 +249,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
 
         if (getBinaryOperatorWhiteList() != null) {
             MapExpression map = new MapExpression();
-            for (Map.Entry entry : getBinaryOperatorWhiteList().entrySet()) {
+            for (Map.Entry<String, List<List<String>>> entry : getBinaryOperatorWhiteList().entrySet()) {
                 ListExpression le = new ListExpression();
-                for (List<String> pair : (List<List<String>>) entry.getValue()) {
+                for (List<String> pair : entry.getValue()) {
                     ListExpression pairExpression = new ListExpression();
                     pairExpression.addExpression(new ConstantExpression(pair.get(0)));
                     pairExpression.addExpression(new ConstantExpression(pair.get(1)));
@@ -266,9 +266,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
 
         if (getBinaryOperatorBlackList() != null) {
             MapExpression map = new MapExpression();
-            for (Map.Entry entry : getBinaryOperatorBlackList().entrySet()) {
+            for (Map.Entry<String, List<List<String>>> entry : getBinaryOperatorBlackList().entrySet()) {
                 ListExpression le = new ListExpression();
-                for (List<String> pair : (List<List<String>>) entry.getValue()) {
+                for (List<String> pair : entry.getValue()) {
                     ListExpression pairExpression = new ListExpression();
                     pairExpression.addExpression(new ConstantExpression(pair.get(0)));
                     pairExpression.addExpression(new ConstantExpression(pair.get(1)));
