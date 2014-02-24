@@ -33,8 +33,9 @@ import java.util.Map;
  */
 
 
-public final class GroovyAccessControl {
+public class GroovyAccessControl {
     static final String CLASS_SEPARATOR = "#";
+
     // methods for a given receiver, syntax like MyReceiver.myMethod
     private final List<String> methodsOnReceiverWhitelist;
     private final List<String> methodsOnReceiverBlacklist;
@@ -102,7 +103,7 @@ public final class GroovyAccessControl {
 
     }
 
-    public final Object checkCall(final Object receiver, final String methodName, final Object[] args, final Closure closure) {
+    public Object checkCall(Object receiver, String methodName, Object[] args, Closure closure) {
         if(receiver != null) {
             if (receiver instanceof Class) {
                 if (methodName.equals("new")) {
@@ -190,7 +191,7 @@ public final class GroovyAccessControl {
         return null;
     }
 
-    public final Object checkMethodPointerDeclaration(final Object receiver, final String methodCall) {
+    public Object checkMethodPointerDeclaration(Object receiver, String methodCall) {
         Class toto = extractClassForReceiver(receiver);
         String clazz = (toto != null) ? toto.getName() : "null";
 
@@ -208,7 +209,7 @@ public final class GroovyAccessControl {
         return new MethodClosure(receiver, methodCall);
     }
 
-    public final Object checkBinaryExpression(final String token, final Object left, final Object right, final Closure closure){
+    public Object checkBinaryExpression(String token, Object left, Object right, Closure closure) {
         String clazzLeft = left == null ? "null" : left.getClass().getName();
         String clazzRight = right == null ? "null" : right.getClass().getName();
         if(binaryOperatorBlackList != null) {
@@ -245,7 +246,7 @@ public final class GroovyAccessControl {
         return closure.call(left, right);
     }
 
-    public final Object checkPropertyNode(final Object receiver, final String name, final boolean attribute, final Closure closure) {
+    public Object checkPropertyNode(Object receiver, String name, boolean attribute, Closure closure) {
         Class toto = extractClassForReceiver(receiver);
         String clazz = (toto != null) ? toto.getName() : "null";
         String id = clazz + CLASS_SEPARATOR + (attribute ? "@" : "") + name;

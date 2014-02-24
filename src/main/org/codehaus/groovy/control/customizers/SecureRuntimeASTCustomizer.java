@@ -17,32 +17,43 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
-
-import org.codehaus.groovy.ast.*;
+import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.*;
-import org.codehaus.groovy.ast.stmt.*;
+import org.codehaus.groovy.ast.stmt.BlockStatement;
+import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.ReturnStatement;
+import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.classgen.VariableScopeVisitor;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.runtime.InvokerHelper;
 import org.codehaus.groovy.transform.sc.ListOfExpressionsExpression;
+import org.objectweb.asm.Opcodes;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * TO BE FILLED
+ *
  * @author Corinne Krych
  * @author Fabrice Matrat
- * @since  2.2.1
- *
+ * @since 2.2.1
  */
-public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
+public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements Opcodes {
     // TODO move methods to compile time check
     private List<String> methodsWhiteList;
     private List<String> methodsBlackList;
-    private Map<String,List<List<String>>> binaryOperatorWhiteList;
-    private Map<String,List<List<String>>> binaryOperatorBlackList;
+    private Map<String, List<List<String>>> binaryOperatorWhiteList;
+    private Map<String, List<List<String>>> binaryOperatorBlackList;
 
     private List<String> methodPointersWhiteList;
     private List<String> methodPointersBlackList;
@@ -149,133 +160,149 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
     public void call(final SourceUnit source, final GeneratorContext context, final ClassNode classNode) throws CompilationFailedException {
         super.call(source, context, classNode);
 
+        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
+        scopeVisitor.prepareVisit(classNode);
+
         SecuringCodeRuntimeVisitor runtimeVisitor = new SecuringCodeRuntimeVisitor(source);
 
+        FieldNode gacNode = createAccessControlField(classNode);
+
         List<Statement> initializers = classNode.getObjectInitializerStatements();
-        for(Statement statement : initializers) {
+        for (Statement statement : initializers) {
             statement.visit(runtimeVisitor);
+            statement.visit(scopeVisitor);
         }
+
         List<FieldNode> fields = classNode.getFields();
         for (FieldNode field : fields) {
-            runtimeVisitor.visitField(field);
+            if (field != gacNode) {
+                runtimeVisitor.visitField(field);
+                runtimeVisitor.visitField(field);
+            }
         }
 
         for (MethodNode methodNode : classNode.getMethods()) {
-            methodNode.getCode().visit(runtimeVisitor);
+            if (!methodNode.isSynthetic() || ("<clinit>".equals(methodNode.getName()))) {
+                methodNode.getCode().visit(runtimeVisitor);
+                methodNode.getCode().visit(scopeVisitor);
+            }
         }
 
-//      if (something) {  // Want to add only once the GroovyAccessControl but is it the right place
+    }
+
+    private FieldNode createAccessControlField(final ClassNode classNode) {
+        //      if (something) {  // Want to add only once the GroovyAccessControl but is it the right place
         ArgumentListExpression expression = new ArgumentListExpression();
-        if(getMethodsWhiteList() != null) {
+        if (getMethodsWhiteList() != null) {
             ListExpression array = new ListExpression();
-            for(String whiteListElement : getMethodsWhiteList()) {
+            for (String whiteListElement : getMethodsWhiteList()) {
                 array.addExpression(new ConstantExpression(whiteListElement));
             }
             List<MethodNode> methods = filterMethods(classNode);
-            for(MethodNode methodNode : methods) {
+            for (MethodNode methodNode : methods) {
+                array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + GroovyAccessControl.CLASS_SEPARATOR + methodNode.getName()));
+            }
+            for (MethodNode methodNode : GAC_CLASS.getMethods()) {
                 array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + GroovyAccessControl.CLASS_SEPARATOR + methodNode.getName()));
             }
             // Need to add all the method of other class
             // even inner class ? or just className.*
             expression.addExpression(array);
         } else {
-            expression.addExpression(ConstantExpression.NULL);
+            expression.addExpression(new ConstantExpression(null));
         }
-        if(getMethodsBlackList() != null) {
+        if (getMethodsBlackList() != null) {
             ListExpression array = new ListExpression();
-            for(String blackListElement : getMethodsBlackList()) {
+            for (String blackListElement : getMethodsBlackList()) {
                 array.addExpression(new ConstantExpression(blackListElement));
             }
             expression.addExpression(array);
         } else {
-            expression.addExpression(ConstantExpression.NULL);
+            expression.addExpression(new ConstantExpression(null));
         }
 
         // TODO: To revisit
-        if(getMethodPointersWhiteList() != null) {
+        if (getMethodPointersWhiteList() != null) {
             ListExpression array = new ListExpression();
-            for(String whiteListElement : getMethodPointersWhiteList()) {
+            for (String whiteListElement : getMethodPointersWhiteList()) {
                 array.addExpression(new ConstantExpression(whiteListElement));
             }
             List<MethodNode> methods = filterMethods(classNode);
-            for(MethodNode methodNode : methods) {
+            for (MethodNode methodNode : methods) {
                 array.addExpression(new ConstantExpression(methodNode.getDeclaringClass() + GroovyAccessControl.CLASS_SEPARATOR + methodNode.getName()));
             }
             // Need to add all the method of other class
             // even inner class ? or just className.*
             expression.addExpression(array);
         } else {
-            expression.addExpression(ConstantExpression.NULL);
+            expression.addExpression(new ConstantExpression(null));
         }
-        if(getMethodPointersBlackList() != null) {
+        if (getMethodPointersBlackList() != null) {
             ListExpression array = new ListExpression();
-            for(String blackListElement : getMethodPointersBlackList()) {
+            for (String blackListElement : getMethodPointersBlackList()) {
                 array.addExpression(new ConstantExpression(blackListElement));
             }
             expression.addExpression(array);
         } else {
-            expression.addExpression(ConstantExpression.NULL);
+            expression.addExpression(new ConstantExpression(null));
         }
 
-        if(getBinaryOperatorWhiteList() != null) {
+        if (getBinaryOperatorWhiteList() != null) {
             MapExpression map = new MapExpression();
-            for(Map.Entry entry : getBinaryOperatorWhiteList().entrySet()) {
+            for (Map.Entry entry : getBinaryOperatorWhiteList().entrySet()) {
                 ListExpression le = new ListExpression();
-                for (List<String> pair: (List<List<String>>)entry.getValue()){
+                for (List<String> pair : (List<List<String>>) entry.getValue()) {
                     ListExpression pairExpression = new ListExpression();
                     pairExpression.addExpression(new ConstantExpression(pair.get(0)));
                     pairExpression.addExpression(new ConstantExpression(pair.get(1)));
                     le.addExpression(pairExpression);
                 }
-                map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression(entry.getKey()),le ) );
+                map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression(entry.getKey()), le));
             }
             expression.addExpression(map);
         } else {
-            expression.addExpression(ConstantExpression.NULL);
+            expression.addExpression(new ConstantExpression(null));
         }
 
-        if(getBinaryOperatorBlackList() != null) {
+        if (getBinaryOperatorBlackList() != null) {
             MapExpression map = new MapExpression();
-            for(Map.Entry entry : getBinaryOperatorBlackList().entrySet()) {
+            for (Map.Entry entry : getBinaryOperatorBlackList().entrySet()) {
                 ListExpression le = new ListExpression();
-                for (List<String> pair: (List<List<String>>)entry.getValue()){
+                for (List<String> pair : (List<List<String>>) entry.getValue()) {
                     ListExpression pairExpression = new ListExpression();
                     pairExpression.addExpression(new ConstantExpression(pair.get(0)));
                     pairExpression.addExpression(new ConstantExpression(pair.get(1)));
                     le.addExpression(pairExpression);
                 }
-                map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression(entry.getKey()),le ) );
+                map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression(entry.getKey()), le));
             }
 
             expression.addExpression(map);
         } else {
-            expression.addExpression(ConstantExpression.NULL);
+            expression.addExpression(new ConstantExpression(null));
         }
 
         // Properties WL / BL
-        if(getPropertiesWhiteList() != null) {
+        if (getPropertiesWhiteList() != null) {
             ListExpression array = new ListExpression();
-            for(String whiteListElement : getPropertiesWhiteList()) {
+            for (String whiteListElement : getPropertiesWhiteList()) {
                 array.addExpression(new ConstantExpression(whiteListElement));
             }
             expression.addExpression(array);
         } else {
-            expression.addExpression(ConstantExpression.NULL);
+            expression.addExpression(new ConstantExpression(null));
         }
-        if(getPropertiesBlackList() != null) {
+        if (getPropertiesBlackList() != null) {
             ListExpression array = new ListExpression();
-            for(String blackListElement : getPropertiesBlackList()) {
+            for (String blackListElement : getPropertiesBlackList()) {
                 array.addExpression(new ConstantExpression(blackListElement));
             }
             expression.addExpression(array);
         } else {
-            expression.addExpression(ConstantExpression.NULL);
+            expression.addExpression(new ConstantExpression(null));
         }
 
-        classNode.addFieldFirst("groovyAccessControl", MethodNode.ACC_PROTECTED | MethodNode.ACC_FINAL | MethodNode.ACC_STATIC, GAC_CLASS, new ConstructorCallExpression(GAC_CLASS, expression));
-
-        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
-        scopeVisitor.visitClass(classNode);
+        return classNode.addFieldFirst("groovyAccessControl", ACC_SYNTHETIC | ACC_PROTECTED | ACC_FINAL | ACC_STATIC, GAC_CLASS, new ConstructorCallExpression(GAC_CLASS, expression));
     }
 
     private class SecuringCodeRuntimeVisitor extends ClassCodeExpressionTransformer {
@@ -299,15 +326,15 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return makeSafeMethodCall((MethodCallExpression) exp);
             }
 
-            if(exp instanceof BinaryExpression) {
-                BinaryExpression expression = (BinaryExpression)exp;
+            if (exp instanceof BinaryExpression) {
+                BinaryExpression expression = (BinaryExpression) exp;
                 expression.setRightExpression(transform(expression.getRightExpression()));
 
-                if(!(expression instanceof DeclarationExpression)){
+                if (!(expression instanceof DeclarationExpression)) {
                     expression.setLeftExpression(transform(expression.getLeftExpression()));
                     ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(expression);
                     MethodCallExpression methodCallExpression = new MethodCallExpression(
-                            new VariableExpression("groovyAccessControl", new ClassNode(GroovyAccessControl.class)), "checkBinaryExpression", argumentListExpression);
+                            new VariableExpression("groovyAccessControl", GAC_CLASS), "checkBinaryExpression", argumentListExpression);
                     methodCallExpression.setSourcePosition(exp);
                     methodCallExpression.setImplicitThis(false);
                     return methodCallExpression;
@@ -329,8 +356,8 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return methodCallExpression;
             }
 
-            if(exp instanceof ClosureExpression) {
-                ClosureExpression expression = (ClosureExpression)exp;
+            if (exp instanceof ClosureExpression) {
+                ClosureExpression expression = (ClosureExpression) exp;
                 expression.getCode().visit(this);
                 return expression;
             }
@@ -347,99 +374,99 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return methodCallExpression;
             }
 
-            if(exp instanceof ClassExpression) {
-                ClassExpression expression = (ClassExpression)exp;
+            if (exp instanceof ClassExpression) {
+                ClassExpression expression = (ClassExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof TernaryExpression) {
-                if(exp instanceof ElvisOperatorExpression) {
-                    ElvisOperatorExpression expression = (ElvisOperatorExpression)exp;
+            if (exp instanceof TernaryExpression) {
+                if (exp instanceof ElvisOperatorExpression) {
+                    ElvisOperatorExpression expression = (ElvisOperatorExpression) exp;
                     System.out.println("TO BE FILLED IF NECESSARY" + expression);
                     return super.transform(expression);
                 } else {
-	                TernaryExpression expression = (TernaryExpression)exp;
-	                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                    return super.transform(expression);
-                }
-            }
-            
-            if(exp instanceof SpreadExpression) {
-            	SpreadExpression expression = (SpreadExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return super.transform(expression);
-            }
-
-            if(exp instanceof PrefixExpression) {
-                PrefixExpression expression = (PrefixExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return super.transform(expression);
-            }
-
-            if(exp instanceof PostfixExpression) {
-                PostfixExpression expression = (PostfixExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return super.transform(expression);
-            }
-
-            if(exp instanceof BooleanExpression) {
-                BooleanExpression expression = (BooleanExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return super.transform(expression);
-            }
-
-            if(exp instanceof MapExpression) {
-                if(exp instanceof NamedArgumentListExpression) {
-                	NamedArgumentListExpression expression = (NamedArgumentListExpression)exp;
+                    TernaryExpression expression = (TernaryExpression) exp;
                     System.out.println("TO BE FILLED IF NECESSARY" + expression);
                     return super.transform(expression);
                 }
-                MapExpression expression = (MapExpression)exp;
+            }
+
+            if (exp instanceof SpreadExpression) {
+                SpreadExpression expression = (SpreadExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof MapEntryExpression) {
-                MapEntryExpression expression = (MapEntryExpression)exp;
+            if (exp instanceof PrefixExpression) {
+                PrefixExpression expression = (PrefixExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof ListExpression) {
-                if(exp instanceof ClosureListExpression) {
-                	ClosureListExpression expression = (ClosureListExpression)exp;
+            if (exp instanceof PostfixExpression) {
+                PostfixExpression expression = (PostfixExpression) exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return super.transform(expression);
+            }
+
+            if (exp instanceof BooleanExpression) {
+                BooleanExpression expression = (BooleanExpression) exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return super.transform(expression);
+            }
+
+            if (exp instanceof MapExpression) {
+                if (exp instanceof NamedArgumentListExpression) {
+                    NamedArgumentListExpression expression = (NamedArgumentListExpression) exp;
+                    System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                    return super.transform(expression);
+                }
+                MapExpression expression = (MapExpression) exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return super.transform(expression);
+            }
+
+            if (exp instanceof MapEntryExpression) {
+                MapEntryExpression expression = (MapEntryExpression) exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return super.transform(expression);
+            }
+
+            if (exp instanceof ListExpression) {
+                if (exp instanceof ClosureListExpression) {
+                    ClosureListExpression expression = (ClosureListExpression) exp;
                     System.out.println("TO BE FILLED IF NECESSARY" + expression);
                     return expression;
                 }
-                ListExpression expression = (ListExpression)exp;
+                ListExpression expression = (ListExpression) exp;
                 List<Expression> list = expression.getExpressions();
                 ListExpression transformed = new ListExpression();
-                for(Expression ex1 : list) {
+                for (Expression ex1 : list) {
                     transformed.addExpression(transform(ex1));
                 }
                 transformed.setSourcePosition(expression);
                 return transformed;
             }
 
-            if(exp instanceof RangeExpression) {
-                RangeExpression expression = (RangeExpression)exp;
+            if (exp instanceof RangeExpression) {
+                RangeExpression expression = (RangeExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof VariableExpression) {
-                VariableExpression expression = (VariableExpression)exp;
+            if (exp instanceof VariableExpression) {
+                VariableExpression expression = (VariableExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof PropertyExpression) {
+            if (exp instanceof PropertyExpression) {
                 return makeSafeProperty((PropertyExpression) exp);
             }
 
-            if(exp instanceof FieldExpression) {
-                FieldExpression expression = (FieldExpression)exp;
+            if (exp instanceof FieldExpression) {
+                FieldExpression expression = (FieldExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
@@ -460,74 +487,68 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
                 return methodCallExpression;
             }
 
-            if(exp instanceof ConstantExpression) {
-                if(exp instanceof AnnotationConstantExpression) {
-                	AnnotationConstantExpression expression = (AnnotationConstantExpression)exp;
+            if (exp instanceof ConstantExpression) {
+                if (exp instanceof AnnotationConstantExpression) {
+                    AnnotationConstantExpression expression = (AnnotationConstantExpression) exp;
                     System.out.println("TO BE FILLED IF NECESSARY" + expression);
                     return super.transform(expression);
                 }
 
-                ConstantExpression expression = (ConstantExpression)exp;
+                ConstantExpression expression = (ConstantExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof ClassExpression) {
-                ClassExpression expression = (ClassExpression)exp;
+            if (exp instanceof ArrayExpression) {
+                ArrayExpression expression = (ArrayExpression) exp;
+                System.out.println("TO BE FILLED IF NECESSARY" + expression);
+                return super.transform(expression);
+            }
+            if (exp instanceof BitwiseNegationExpression) {
+                BitwiseNegationExpression expression = (BitwiseNegationExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof ArrayExpression) {
-                ArrayExpression expression = (ArrayExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return super.transform(expression);
-            }
-            if(exp instanceof BitwiseNegationExpression) {
-            	BitwiseNegationExpression expression = (BitwiseNegationExpression)exp;
-                System.out.println("TO BE FILLED IF NECESSARY" + expression);
-                return super.transform(expression);
-            }
-
-            if(exp instanceof CastExpression) {
-                CastExpression expression = (CastExpression)exp;
+            if (exp instanceof CastExpression) {
+                CastExpression expression = (CastExpression) exp;
                 CastExpression transformed = new CastExpression(expression.getType(), transform(expression.getExpression()));
                 transformed.setSourcePosition(exp);
                 return transformed;
             }
 
-            if(exp instanceof EmptyExpression) {
-            	EmptyExpression expression = (EmptyExpression)exp;
+            if (exp instanceof EmptyExpression) {
+                EmptyExpression expression = (EmptyExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof GStringExpression) {
-            	GStringExpression expression = (GStringExpression)exp;
+            if (exp instanceof GStringExpression) {
+                GStringExpression expression = (GStringExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof ListOfExpressionsExpression) {
-            	ListOfExpressionsExpression expression = (ListOfExpressionsExpression)exp;
+            if (exp instanceof ListOfExpressionsExpression) {
+                ListOfExpressionsExpression expression = (ListOfExpressionsExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof SpreadMapExpression) {
-            	SpreadMapExpression expression = (SpreadMapExpression)exp;
+            if (exp instanceof SpreadMapExpression) {
+                SpreadMapExpression expression = (SpreadMapExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof UnaryMinusExpression) {
-            	UnaryMinusExpression expression = (UnaryMinusExpression)exp;
+            if (exp instanceof UnaryMinusExpression) {
+                UnaryMinusExpression expression = (UnaryMinusExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
 
-            if(exp instanceof UnaryPlusExpression) {
-            	UnaryPlusExpression expression = (UnaryPlusExpression)exp;
+            if (exp instanceof UnaryPlusExpression) {
+                UnaryPlusExpression expression = (UnaryPlusExpression) exp;
                 System.out.println("TO BE FILLED IF NECESSARY" + expression);
                 return super.transform(expression);
             }
@@ -634,18 +655,18 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer {
             return arguments;
         }
 
-        private ArgumentListExpression getArgumentsExpressionForCheckBinaryCall(BinaryExpression binaryExpression){
+        private ArgumentListExpression getArgumentsExpressionForCheckBinaryCall(BinaryExpression binaryExpression) {
             BlockStatement blockStatement = new BlockStatement();
 
             Parameter left = new Parameter(ClassHelper.OBJECT_TYPE, "left");
             Parameter right = new Parameter(ClassHelper.OBJECT_TYPE, "right");
 
             // Does not work for AttributeExpression
-            BinaryExpression be = new BinaryExpression(new VariableExpression(left),binaryExpression.getOperation(), new VariableExpression(right));
+            BinaryExpression be = new BinaryExpression(new VariableExpression(left), binaryExpression.getOperation(), new VariableExpression(right));
 
             ExpressionStatement expressionStatement = new ExpressionStatement(be);
             blockStatement.addStatement(expressionStatement);
-            ClosureExpression closureExpression = new ClosureExpression(new Parameter[]{left,right}, blockStatement);
+            ClosureExpression closureExpression = new ClosureExpression(new Parameter[]{left, right}, blockStatement);
             ArgumentListExpression arguments = new ArgumentListExpression();
 
             arguments.addExpression(new ConstantExpression(binaryExpression.getOperation().getText()));
