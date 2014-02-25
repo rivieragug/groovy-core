@@ -33,7 +33,9 @@ import org.codehaus.groovy.classgen.VariableScopeVisitor;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.runtime.InvokerHelper;
+import org.codehaus.groovy.syntax.Types;
 import org.codehaus.groovy.transform.sc.ListOfExpressionsExpression;
+import org.codehaus.groovy.transform.stc.StaticTypeCheckingSupport;
 import org.objectweb.asm.Opcodes;
 
 import java.util.Arrays;
@@ -338,19 +340,13 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
             }
 
             if (exp instanceof BinaryExpression) {
-                BinaryExpression expression = (BinaryExpression) exp;
-                expression.setRightExpression(transform(expression.getRightExpression()));
-
-                if (!(expression instanceof DeclarationExpression)) {
-                    expression.setLeftExpression(transform(expression.getLeftExpression()));
-                    ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(expression);
-                    MethodCallExpression methodCallExpression = new MethodCallExpression(
-                            new VariableExpression("groovyAccessControl", GAC_CLASS), "checkBinaryExpression", argumentListExpression);
-                    methodCallExpression.setSourcePosition(exp);
-                    methodCallExpression.setImplicitThis(false);
-                    return methodCallExpression;
+                BinaryExpression bin = (BinaryExpression) exp;
+                if (StaticTypeCheckingSupport.isAssignment(bin.getOperation().getType())) {
+                    bin.setLeftExpression(transform(bin.getLeftExpression()));
+                    bin.setRightExpression(transform(bin.getRightExpression()));
+                    return bin;
                 }
-                return expression;
+                return makeSafeBinaryExpression(bin);
             }
 
             if (exp instanceof StaticMethodCallExpression) {
@@ -569,6 +565,16 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
             return super.transform(exp);
         }
 
+        private Expression makeSafeBinaryExpression(final BinaryExpression exp) {
+            ArgumentListExpression argumentListExpression = getArgumentsExpressionForCheckBinaryCall(exp);
+            MethodCallExpression methodCallExpression = new MethodCallExpression(
+                    new VariableExpression("groovyAccessControl", GAC_CLASS), "checkBinaryExpression", argumentListExpression);
+            methodCallExpression.setSourcePosition(exp);
+            methodCallExpression.setImplicitThis(false);
+            System.out.println("Binary -> " + methodCallExpression.getText());
+            return methodCallExpression;
+        }
+
         private Expression makeSafeProperty(final PropertyExpression pexp) {
             boolean attribute = pexp instanceof AttributeExpression;
             if (pexp.isSpreadSafe()) {
@@ -629,6 +635,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
                 result.setSourcePosition(call);
                 return makeSafeMethodCall(result);
             }
+            if ("this".equals(call.getObjectExpression().getText())) {
+                return makeSafeCallOnThis(call);
+            }
             ArgumentListExpression groovyAccessControlArguments = getArgumentsExpressionsForClosureCall(
                     call.getObjectExpression(),
                     call.getMethod(),
@@ -636,7 +645,18 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
 
             MethodCallExpression methodCallExpression = new MethodCallExpression(new VariableExpression("groovyAccessControl", GAC_CLASS), "checkCall", groovyAccessControlArguments);
             methodCallExpression.setSourcePosition(call);
+            methodCallExpression.setImplicitThis(false);
+            System.out.println("methodCallExpression = " + methodCallExpression.getText());
             return methodCallExpression;
+        }
+
+        private MethodCallExpression makeSafeCallOnThis(final MethodCallExpression call) {
+            if (call.isImplicitThis()) {
+
+            }
+            call.setArguments(transform(call.getArguments()));
+            System.out.println("methodCallExpression = " + call.getText());
+            return call;
         }
 
         private ArgumentListExpression getArgumentsExpressionsForClosureCall(Expression objectExpression, Expression methodExpression, Expression argsExpression) {
@@ -681,8 +701,8 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
             ArgumentListExpression arguments = new ArgumentListExpression();
 
             arguments.addExpression(new ConstantExpression(binaryExpression.getOperation().getText()));
-            arguments.addExpression(binaryExpression.getLeftExpression());
-            arguments.addExpression(binaryExpression.getRightExpression());
+            arguments.addExpression(transform(binaryExpression.getLeftExpression()));
+            arguments.addExpression(transform(binaryExpression.getRightExpression()));
             arguments.addExpression(closureExpression);
             return arguments;
 
