@@ -17,6 +17,8 @@
 package org.codehaus.groovy.control.customizers;
 
 import groovy.lang.Closure;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.runtime.MethodClosure;
 
 import java.lang.reflect.Constructor;
@@ -25,6 +27,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * TODO Add JavaDocs TODO Revisit location in the correct package
@@ -46,6 +49,9 @@ public class GroovyAccessControl {
     private final List<String> methodPointersOnReceiverBlacklist;
     private final List<String> propertiesWhiteList;
     private final List<String> propertiesBlackList;
+    // contains the set of classes which are wildcarded, that is to say that anything on those
+    // classes is accepted
+    private final Set<String> classWildcards;
 
     public GroovyAccessControl(
             List<String> methodWhitelist,
@@ -55,7 +61,8 @@ public class GroovyAccessControl {
             Map<String, List<List<String>>> binaryWhiteList,
             Map<String, List<List<String>>> binaryBlackList,
             List<String> propertiesWhiteList,
-            List<String> propertiesBlackList) {
+            List<String> propertiesBlackList,
+            Set<String> classWildCards) {
 
         if (methodWhitelist != null) {
             this.methodsOnReceiverWhitelist = Collections.unmodifiableList(methodWhitelist);
@@ -101,7 +108,7 @@ public class GroovyAccessControl {
             this.propertiesBlackList = null;
         }
 
-
+        this.classWildcards = classWildCards==null?Collections.<String>emptySet():Collections.unmodifiableSet(classWildCards);
     }
 
     public Object checkCall(Object receiver, String methodName, Object[] args, Closure closure) {
@@ -152,25 +159,38 @@ public class GroovyAccessControl {
     }
 
     public Object checkPropertyNode(Object receiver, String name, boolean attribute, Closure closure) {
-        String clazz = findClassForProperty(receiver.getClass(), name);
-        if (clazz == null ) {
-            clazz = findClassForMethod(receiver.getClass(), "get" +  name.substring(0, 1).toUpperCase() + name.substring(1));
-        }
-        String id = clazz + CLASS_SEPARATOR + (attribute ? "@" : "") + name;
+        Class<?> receiverClass = receiver.getClass();
+        if (!isWildcarded(receiverClass)) {
+            String clazz = findClassForProperty(receiverClass, name);
+            if (clazz == null ) {
+                clazz = findClassForMethod(receiverClass, "get" +  name.substring(0, 1).toUpperCase() + name.substring(1));
+            }
+            String id = clazz + CLASS_SEPARATOR + (attribute ? "@" : "") + name;
 
-        if (propertiesBlackList != null && propertiesBlackList.contains(id)) {
-            throw new SecurityException(id + " is not allowed ...........");
-        }
-        if (propertiesWhiteList != null && !propertiesWhiteList.contains(id)) {
-            throw new SecurityException(id + " is not allowed ...........");
+            if (propertiesBlackList != null && propertiesBlackList.contains(id)) {
+                throw new SecurityException(id + " is not allowed ...........");
+            }
+            if (propertiesWhiteList != null && !propertiesWhiteList.contains(id)) {
+                throw new SecurityException(id + " is not allowed ...........");
+            }
         }
         return closure.call(receiver, name);
     }
 
+    private boolean isWildcarded(Class clazz) {
+        return classWildcards.contains(clazz.getName())
+                || clazz.getEnclosingClass() != null && isWildcarded(clazz.getEnclosingClass());
+    }
 
     private void checkCallOnReceiver(Object receiver, String methodName, Object[] args, List blacklist, List whitelist) {
         if(receiver != null) {
+            if (isWildcarded(receiver.getClass())) {
+                return;
+            }
             if (receiver instanceof Class) {
+                if (isWildcarded((Class) receiver)) {
+                    return;
+                }
                 if (methodName.equals("new")) {
                     String ctor = findConstructorForClass(receiver.getClass(), null);
                     if (methodsOnReceiverBlacklist != null && methodsOnReceiverBlacklist.contains(((Class) receiver).getName() + CLASS_SEPARATOR + ctor)) {

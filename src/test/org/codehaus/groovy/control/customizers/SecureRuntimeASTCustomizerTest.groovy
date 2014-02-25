@@ -295,9 +295,7 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         def shell = new GroovyShell(configuration)
         String script = """
             import java.util.ArrayList
-            public static void b() {
-            }
-            b()
+            def b = Math.random()
             def a = new ArrayList()
             a.add(new ArrayList())
         """
@@ -307,15 +305,13 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         configuration.addCompilationCustomizers(customizer)
 
         // Test we're going into StaticMethodCallExpression as Math.random goes through MethodCallExpression
-        // This BL doesn't make any sense
-        // TODO any better way?
         customizer.with {
-            methodsBlackList = ["Script2#b"]
+            methodsBlackList = ["java.lang.Math#random"]
         }
 
         assert hasSecurityException ({
             shell.evaluate(script)
-        }, "Script2#b")
+        }, "java.lang.Math#random")
     }
 
     void testForNameSecurity() {

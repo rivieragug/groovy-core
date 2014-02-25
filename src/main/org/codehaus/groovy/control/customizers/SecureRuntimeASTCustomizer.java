@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * TO BE FILLED
@@ -301,8 +302,17 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
             expression.addExpression(new ConstantExpression(null));
         }
 
-        //VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
-        //scopeVisitor.visitClass(classNode);
+        // add this class and all classes of the source unit to the wildcards
+        List<Expression> expressions = new LinkedList<Expression>();
+        expressions.add(new ConstantExpression(classNode.getName()));
+        List unitClasses = classNode.getCompileUnit().getClasses();
+        for (Object o : unitClasses) {
+            expressions.add(new ConstantExpression(((ClassNode)o).getName()));
+        }
+        CastExpression wildcards = new CastExpression(ClassHelper.make(Set.class), new ListExpression(expressions));
+        wildcards.setCoerce(true);
+        expression.addExpression(wildcards);
+
         return classNode.addFieldFirst("groovyAccessControl", ACC_SYNTHETIC | ACC_PROTECTED | ACC_FINAL | ACC_STATIC, GAC_CLASS, new ConstructorCallExpression(GAC_CLASS, expression));
     }
 
