@@ -598,6 +598,9 @@ public class SecureRuntimeASTCustomizer extends SecureASTCustomizer implements O
                 return makeSafeMethodCall(result);
 
             }
+            if ("this".equals(pexp.getObjectExpression().getText())) {
+                return pexp;
+            }
             Expression closureExpression = new ConstructorCallExpression(
                     ClassHelper.make(PropertyCallClosure.class),
                     ArgumentListExpression.EMPTY_ARGUMENTS
