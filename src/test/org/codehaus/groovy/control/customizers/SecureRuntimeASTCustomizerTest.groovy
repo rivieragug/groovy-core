@@ -291,11 +291,12 @@ class SecureRuntimeASTCustomizerTest extends GroovyTestCase {
         }, "java.util.ArrayList#add")
     }
 
-    void testStaticMethodInBlackList() {
+    void testStaticMethodCallExpressionInBlackList() {
         def shell = new GroovyShell(configuration)
         String script = """
+            import static java.lang.Math.random
             import java.util.ArrayList
-            def b = Math.random()
+            def b = random()
             def a = new ArrayList()
             a.add(new ArrayList())
         """
